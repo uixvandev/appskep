@@ -8,47 +8,84 @@
 import SwiftUI
 
 struct MainTabView: View {
-  @State private var selectedIndex: Int = 0
-  
-  var body: some View {
-    TabView(selection: $selectedIndex) {
-      HomeView()
-        .tabItem {
-          let iconName = (selectedIndex == 0) ? "HomeBold" : "Home"
-          Image(iconName)
-          Text("Beranda")
+    @State private var selectedIndex: Int = 0
+    @EnvironmentObject private var tryOutCoordinator: TryOutCoordinator
+    
+    var body: some View {
+        TabView(selection: $selectedIndex) {
+            NavigationStack {
+                HomeView()
+            }
+            .tabItem {
+                let iconName = (selectedIndex == 0) ? "HomeBold" : "Home"
+                Image(iconName)
+                Text("Beranda")
+            }
+            .tag(0)
+            
+            NavigationStack {
+                SearchClassView()
+            }
+            .tabItem {
+                let iconName = (selectedIndex == 1) ? "SearchBold" : "Search"
+                Image(iconName)
+                Text("Search")
+            }
+            .tag(1)
+            
+            NavigationStack {
+                MyClassView()
+            }
+            .tabItem {
+                let iconName = (selectedIndex == 2) ? "PaperBold" : "Paper"
+                Image(iconName)
+                Text("Kelas saya")
+            }
+            .tag(2)
+            
+            NavigationStack {
+                ProfileView()
+            }
+            .tabItem {
+                let iconName = (selectedIndex == 3) ? "ProfileBold" : "Profile"
+                Image(iconName)
+                Text("Profil")
+            }
+            .tag(3)
         }
-        .tag(0)
-      
-      SearchClassView()
-        .tabItem {
-          let iconName = (selectedIndex == 1) ? "SearchBold" : "Search"
-          Image(iconName)
-          Text("Search")
+        .tint(.main)
+        // Try Out Modal
+        .fullScreenCover(isPresented: $tryOutCoordinator.isShowingTryOut) {
+            if let tryOutId = tryOutCoordinator.currentTryOutId {
+                TryOutView(tryOutId: tryOutId)
+                    .environmentObject(tryOutCoordinator)
+            }
         }
-        .tag(1)
-      
-      MyClassView()
-        .tabItem {
-          let iconName = (selectedIndex == 2) ? "PaperBold" : "Paper"
-          Image(iconName)
-          Text("Kelas saya")
+        // Result Modal
+        .fullScreenCover(isPresented: $tryOutCoordinator.isShowingResult) {
+            if let result = tryOutCoordinator.tryOutResult {
+                TryOutResultView(result: result)
+                    .environmentObject(tryOutCoordinator)
+            }
         }
-        .tag(2)
-      
-      ProfileView()
-        .tabItem {
-          let iconName = (selectedIndex == 3) ? "ProfileBold" : "Profile"
-          Image(iconName)
-          Text("Profil")
+        // Auto switch to home tab when returning from try out
+        .onChange(of: tryOutCoordinator.isShowingResult) { _, isShowing in
+            if !isShowing && !tryOutCoordinator.isShowingTryOut {
+                print("🏠 Auto-switching to home tab")
+                selectedIndex = 0
+            }
         }
-        .tag(3)
+        .onChange(of: tryOutCoordinator.isShowingTryOut) { _, isShowing in
+            if !isShowing && !tryOutCoordinator.isShowingResult {
+                print("🏠 Auto-switching to home tab")
+                selectedIndex = 0
+            }
+        }
     }
-    .tint(.main)
-  }
 }
 
 #Preview {
-  MainTabView()
-    .environmentObject(AuthManager.shared)
+    MainTabView()
+        .environmentObject(AuthManager.shared)
+        .environmentObject(TryOutCoordinator())
 }

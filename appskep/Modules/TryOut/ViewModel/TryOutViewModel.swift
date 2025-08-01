@@ -21,6 +21,13 @@ class TryOutViewModel: ObservableObject {
   private var timeRemainingInSeconds: Int = 0
   private var timer: AnyCancellable?
   
+  // MARK: - Coordinator injection (Pure SwiftUI)
+  private weak var coordinator: TryOutCoordinator?
+  
+  func setCoordinator(_ coordinator: TryOutCoordinator) {
+    self.coordinator = coordinator
+  }
+  
   // MARK: - Public computed properties for UI access
   var selectedAnswers: [Int: Int] {
     return _selectedAnswers
@@ -302,6 +309,8 @@ class TryOutViewModel: ObservableObject {
         print("✅ Try out finished successfully!")
         if let result = response.data {
           print("📊 Final Score: \(result.score)")
+          // ✅ Use SwiftUI coordinator injection instead of UIKit
+          coordinator?.showResult(result)
         }
       } else {
         self.errorMessage = response.error ?? response.message

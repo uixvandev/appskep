@@ -3,7 +3,7 @@ import SwiftUI
 struct TryOutView: View {
   let tryOutId: Int
   @StateObject private var viewModel = TryOutViewModel()
-  @Environment(\.dismiss) private var dismiss
+  @EnvironmentObject private var tryOutCoordinator: TryOutCoordinator
   
   var body: some View {
     VStack {
@@ -57,6 +57,7 @@ struct TryOutView: View {
     .navigationBarBackButtonHidden(true) // Prevent back button
     .onAppear {
       print("🎯 TryOutView appeared with tryOutId: \(tryOutId)")
+      viewModel.setCoordinator(tryOutCoordinator)
       Task {
         await viewModel.fetchTryOutDetail(tryOutId: tryOutId)
       }
@@ -79,9 +80,6 @@ struct TryOutView: View {
         print("👤 User confirmed finish try out")
         Task {
           await viewModel.finishTryOut()
-          // Berikan sedikit delay untuk memastikan request selesai
-          try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 detik
-          dismiss()
         }
       }
     } message: {
@@ -135,16 +133,10 @@ struct TryOutView: View {
           }
         }
     )
-    // Also prevent interactive pop gesture
-    .onAppear {
-      // Disable interactive pop gesture if available
-      if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-         let window = windowScene.windows.first,
-         let navigationController = window.rootViewController as? UINavigationController {
-        navigationController.interactivePopGestureRecognizer?.isEnabled = false
-      }
-    }
   }
+  
+  // Rest of the existing code remains the same...
+  // (headerView, questionView, navigationButtons, helper functions)
   
   private func headerView(paketName: String) -> some View {
     VStack(spacing: 12) {
@@ -307,7 +299,5 @@ struct TryOutView: View {
 }
 
 #Preview {
-  NavigationView {
-    TryOutView(tryOutId: 69)
-  }
+  TryOutView(tryOutId: 69)
 }

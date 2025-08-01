@@ -12,10 +12,8 @@ struct TryOutInfoSheet: View {
   let orderId: Int
   
   @StateObject private var viewModel = TryOutViewModel()
+  @EnvironmentObject private var tryOutCoordinator: TryOutCoordinator
   @Environment(\.dismiss) private var dismiss
-  @State private var navigateToTryOut = false
-  @State private var showTryOutFullScreen = false
-  @State private var tryOutId: Int?
   
   var body: some View {
     VStack(spacing: 20) {
@@ -39,8 +37,10 @@ struct TryOutInfoSheet: View {
           Task {
             let success = await viewModel.startTryOut(orderId: orderId, paketId: paket.id)
             if success, let sessionId = viewModel.tryOutSession?.id {
-              tryOutId = sessionId
-              showTryOutFullScreen = true
+              dismiss() // Dismiss sheet first
+              DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                tryOutCoordinator.startTryOut(tryOutId: sessionId)
+              }
             }
           }
         } label: {
@@ -51,11 +51,6 @@ struct TryOutInfoSheet: View {
     .padding()
     .navigationTitle("Detail Paket")
     .navigationBarTitleDisplayMode(.inline)
-    .fullScreenCover(isPresented: $showTryOutFullScreen) {
-      if let id = tryOutId {
-        TryOutView(tryOutId: id)
-      }
-    }
   }
   
   private var prosedurSection: some View {
