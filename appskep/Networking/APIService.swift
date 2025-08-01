@@ -21,51 +21,78 @@ class APIService {
     responseType: T.Type
   ) async throws -> T {
     guard let url = endpoint.url else {
+      print("❌ Invalid URL for endpoint: \(endpoint)")
       throw APIError.invalidURL
     }
     
     var request = URLRequest(url: url)
     request.httpMethod = method.rawValue
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.setValue("application/json", forHTTPHeaderField: "ngrok-skip-browser-warning")
+    
+    // Log request details
+    print("🌐 API Request: \(method.rawValue) \(url)")
     
     // Tambahkan header otentikasi jika endpoint memerlukannya
     if endpoint.requiresAuth {
       guard let token = await AuthManager.shared.authToken else {
+        print("❌ No auth token available")
         throw APIError.unauthorized
       }
       request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+      print("🔐 Authorization header added")
     }
     
     if let body = body {
       request.httpBody = body
+      // Log request body
+      if let jsonString = String(data: body, encoding: .utf8) {
+        print("📤 Request Body: \(jsonString)")
+      }
     }
     
     do {
       let (data, response) = try await session.data(for: request)
       
       guard let httpResponse = response as? HTTPURLResponse else {
+        print("❌ Invalid HTTP response")
         throw APIError.invalidResponse
       }
       
-      // Log untuk debugging
-      print("Status Code: \(httpResponse.statusCode)")
+      // Log response details
+      print("📥 HTTP Status Code: \(httpResponse.statusCode)")
       if let responseString = String(data: data, encoding: .utf8) {
-        print("Response Body: \(responseString)")
+        print("📥 Response Body: \(responseString)")
       }
       
       if (200...299).contains(httpResponse.statusCode) {
-        return try JSONDecoder().decode(T.self, from: data)
+        do {
+          let decodedResponse = try JSONDecoder().decode(T.self, from: data)
+          print("✅ Successfully decoded response")
+          return decodedResponse
+        } catch {
+          print("❌ Decoding error: \(error)")
+          throw APIError.decodingError
+        }
       } else {
         // Coba decode error response dari server
-        // Anda mungkin perlu membuat model ErrorResponse yang lebih generik
-        let errorResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
-        throw APIError.serverError(errorResponse.error ?? errorResponse.message)
+        do {
+          let errorResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
+          print("❌ Server error: \(errorResponse.error ?? errorResponse.message)")
+          throw APIError.serverError(errorResponse.error ?? errorResponse.message)
+        } catch {
+          print("❌ HTTP \(httpResponse.statusCode) - Failed to decode error response")
+          throw APIError.serverError("HTTP \(httpResponse.statusCode)")
+        }
       }
     } catch is DecodingError {
+      print("❌ JSON decoding error")
       throw APIError.decodingError
     } catch let error as APIError {
+      print("❌ API Error: \(error)")
       throw error
     } catch {
+      print("❌ Network error: \(error.localizedDescription)")
       throw APIError.networkError
     }
   }
@@ -84,7 +111,7 @@ enum APIError: Error, LocalizedError {
   case networkError
   case decodingError
   case serverError(String)
-  case unauthorized // Tambahkan case ini
+  case unauthorized
   
   var errorDescription: String? {
     switch self {

@@ -11,6 +11,8 @@ struct MyClassDetailView: View {
   let order: MyOrder
   @StateObject private var viewModel = SearchClassDetailViewModel()
   @State private var selectedPaket: Paket?
+  @State private var showTryOutFullScreen = false
+  @State private var tryOutId: Int?
   
   var body: some View {
     ScrollView {
@@ -32,7 +34,9 @@ struct MyClassDetailView: View {
           ProgressView()
         } else {
           ForEach(viewModel.pakets) { paket in
-            NavigationLink(destination: TryOutInfoSheet(paket: paket, orderId: order.id)) {
+            Button(action: {
+              selectedPaket = paket
+            }) {
               PaketRowView(paket: paket)
             }
             .buttonStyle(PlainButtonStyle())

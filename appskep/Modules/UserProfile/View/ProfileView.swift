@@ -8,11 +8,29 @@
 import SwiftUI
 
 struct ProfileView: View {
+    @EnvironmentObject var authManager: AuthManager
+    
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        VStack(spacing: 20) {
+            Text("Halaman Profil")
+                .font(.title)
+            
+            Button(action: {
+                authManager.logout()
+            }) {
+                Text("Logout")
+                    .foregroundColor(.white)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.red)
+                    .cornerRadius(12)
+            }
+            .padding(.horizontal)
+        }
     }
 }
 
 #Preview {
-    ProfileView()
+  ProfileView()
+    .environmentObject(AuthManager.shared)
 }

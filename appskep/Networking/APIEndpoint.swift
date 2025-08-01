@@ -17,10 +17,12 @@ enum APIEndpoint {
   case getMyOrders(page: Int, limit: Int)
   case startTryOut
   case getTryOutDetail(id: Int)
+  case submitAllAnswers
+  case finishTryOut
   
   var requiresAuth: Bool {
     switch self {
-    case .createOrder, .getMyOrders, .startTryOut, .getTryOutDetail:
+    case .createOrder, .getMyOrders, .startTryOut, .getTryOutDetail, .submitAllAnswers, .finishTryOut:
       return true
     default:
       return false
@@ -28,7 +30,7 @@ enum APIEndpoint {
   }
   
   var baseURL: String {
-    return "https://d0r7n2cn-8080.asse.devtunnels.ms" // Ganti dengan base URL Anda
+    return "https://4928889e85cc.ngrok-free.app" // Ganti dengan base URL Anda
   }
   
   var path: String {
@@ -51,7 +53,10 @@ enum APIEndpoint {
       return "/api/v1/tryouts/start"
     case .getTryOutDetail(let id):
       return "/api/v1/tryouts/\(id)"
-      
+    case .submitAllAnswers:
+      return "/api/v1/tryouts/submit-all"
+    case .finishTryOut:
+      return "/api/v1/tryouts/finish"
     }
   }
   
