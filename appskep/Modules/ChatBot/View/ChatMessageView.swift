@@ -9,6 +9,12 @@ import SwiftUI
 
 struct ChatMessageView: View {
     let message: ChatMessage
+    let onDelete: (() -> Void)?
+    
+    init(message: ChatMessage, onDelete: (() -> Void)? = nil) {
+        self.message = message
+        self.onDelete = onDelete
+    }
     
     var body: some View {
         HStack {
@@ -24,11 +30,22 @@ struct ChatMessageView: View {
     
     private var userMessageView: some View {
         VStack(alignment: .trailing, spacing: 4) {
-            Text(message.content)
-                .padding(12)
-                .background(Color.main)
-                .foregroundColor(.white)
-                .cornerRadius(16, corners: [.topLeft, .topRight, .bottomLeft])
+            HStack(spacing: 8) {
+                // Delete button for deletable messages
+                if let onDelete = onDelete {
+                    Button(action: onDelete) {
+                        Image(systemName: "trash.circle.fill")
+                            .font(.caption)
+                            .foregroundColor(.red.opacity(0.7))
+                    }
+                }
+                
+                Text(message.content)
+                    .padding(12)
+                    .background(Color.main)
+                    .foregroundColor(.white)
+                    .cornerRadius(16, corners: [.topLeft, .topRight, .bottomLeft])
+            }
             
             Text(formatTime(message.timestamp))
                 .font(.caption2)
@@ -47,10 +64,23 @@ struct ChatMessageView: View {
                 .cornerRadius(16)
             
             VStack(alignment: .leading, spacing: 4) {
-                Text("Askep")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.main)
+                HStack {
+                    Text("Askep")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.main)
+                    
+                    Spacer()
+                    
+                    // Delete button for deletable messages
+                    if let onDelete = onDelete {
+                        Button(action: onDelete) {
+                            Image(systemName: "trash.circle.fill")
+                                .font(.caption)
+                                .foregroundColor(.red.opacity(0.7))
+                        }
+                    }
+                }
                 
                 // Format long response text better
                 Text(message.content)
@@ -109,8 +139,12 @@ struct RoundedCorner: Shape {
                 id: 1,
                 content: "Jelaskan mengapa jawaban yang benar itu penting dalam konteks keperawatan?",
                 isUser: true,
-                timestamp: Date()
-            )
+                timestamp: Date(),
+                originalHistoryId: 1
+            ),
+            onDelete: {
+                print("Delete message")
+            }
         )
         
         ChatMessageView(
@@ -118,8 +152,12 @@ struct RoundedCorner: Shape {
                 id: 2,
                 content: "Halo! 👋 Aku Askep, asisten digital keperawatanmu di APPSKEP! Senang sekali bisa membantumu dalam mempersiapkan diri untuk UKOM.",
                 isUser: false,
-                timestamp: Date()
-            )
+                timestamp: Date(),
+                originalHistoryId: 1
+            ),
+            onDelete: {
+                print("Delete message")
+            }
         )
     }
     .padding()

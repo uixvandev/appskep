@@ -196,3 +196,27 @@ struct PembahasanSummary: Codable {
     let correct_by_category: [String: Int]
     let wrong_by_category: [String: Int]
 }
+
+struct TryOutHistoryResponse: Codable {
+    let success: Bool
+    let message: String
+    let data: TryOutHistoryData
+}
+
+struct TryOutHistoryData: Codable {
+    let data: [TryOutHistoryItem]
+    let page: Int
+    let limit: Int
+    let total_items: Int
+    let total_pages: Int
+}
+
+struct TryOutHistoryItem: Codable, Identifiable {
+    let id: Int
+    let order_id: Int
+    let paket_id: Int
+    let started_at: String
+    let finished_at: String
+    let score: Int
+    let paket: Paket
+}

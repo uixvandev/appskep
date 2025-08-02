@@ -23,10 +23,12 @@ enum APIEndpoint {
   case getPembahasan(id: Int)
   case sendChatMessage
   case getChatHistory(page: Int, limit: Int, soalId: Int)
+  case deleteChatMessage(id: Int)
+  case getTryOutHistory(page: Int, limit: Int)
   
   var requiresAuth: Bool {
     switch self {
-    case .createOrder, .getMyOrders, .startTryOut, .getTryOutDetail, .submitAllAnswers, .finishTryOut, .getTryOutResult, .getPembahasan, .sendChatMessage, .getChatHistory:
+    case .createOrder, .getMyOrders, .startTryOut, .getTryOutDetail, .submitAllAnswers, .finishTryOut, .getTryOutResult, .getPembahasan, .sendChatMessage, .getChatHistory, .deleteChatMessage, .getTryOutHistory:
       return true
     default:
       return false
@@ -69,6 +71,10 @@ enum APIEndpoint {
       return "/api/v1/chat/send"
     case .getChatHistory(let page, let limit, let soalId):
       return "/api/v1/chat/history?page=\(page)&limit=\(limit)&soal_id=\(soalId)"
+    case .deleteChatMessage(let id):
+      return "/api/v1/chat/history/\(id)"
+    case .getTryOutHistory(let page, let limit):
+      return "/api/v1/tryouts/history?page=\(page)&limit=\(limit)"
     }
   }
   

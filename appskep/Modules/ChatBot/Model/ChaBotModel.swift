@@ -30,6 +30,12 @@ struct ChatData: Codable {
     let created_at: String
 }
 
+// MARK: - Chat Delete Response
+struct ChatDeleteResponse: Codable {
+    let success: Bool
+    let message: String
+}
+
 // MARK: - Chat History Response
 struct ChatHistoryResponse: Codable {
     let success: Bool

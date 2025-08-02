@@ -12,6 +12,8 @@ struct ChatBotView: View {
     @StateObject private var viewModel = ChatBotViewModel()
     @Environment(\.dismiss) private var dismiss
     @State private var messageText = ""
+    @State private var showDeleteConfirmation = false
+    @State private var messageToDelete: ChatMessage?
     @FocusState private var isTextFieldFocused: Bool
     
     var body: some View {
@@ -56,8 +58,14 @@ struct ChatBotView: View {
                         
                         // Chat messages
                         ForEach(viewModel.messages) { message in
-                            ChatMessageView(message: message)
-                                .id(message.id)
+                            ChatMessageView(
+                                message: message,
+                                onDelete: message.originalHistoryId != nil ? {
+                                    messageToDelete = message
+                                    showDeleteConfirmation = true
+                                } : nil
+                            )
+                            .id(message.id)
                         }
                         
                         // Loading indicator for new messages
@@ -73,6 +81,21 @@ struct ChatBotView: View {
                             .background(Color(.systemGray6))
                             .cornerRadius(16)
                             .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        
+                        // Deleting indicator
+                        if viewModel.isDeletingMessage {
+                            HStack {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                Text("Menghapus pesan...")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding()
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(16)
+                            .frame(maxWidth: .infinity, alignment: .center)
                         }
                         
                         // Empty state message
@@ -115,6 +138,21 @@ struct ChatBotView: View {
                 await viewModel.loadChatHistory(soalId: question.soal_id)
             }
         }
+        .alert("Hapus Pesan", isPresented: $showDeleteConfirmation) {
+            Button("Batal", role: .cancel) {
+                messageToDelete = nil
+            }
+            Button("Hapus", role: .destructive) {
+                if let message = messageToDelete {
+                    Task {
+                        await viewModel.deleteMessage(message)
+                    }
+                }
+                messageToDelete = nil
+            }
+        } message: {
+            Text("Apakah Anda yakin ingin menghapus percakapan ini? Tindakan ini tidak dapat dibatalkan.")
+        }
     }
     
     private var headerView: some View {
@@ -147,17 +185,29 @@ struct ChatBotView: View {
                 
                 Spacer()
                 
-                // Clear history button
+                // Clear all history button
                 if !viewModel.messages.isEmpty {
                     Button(action: {
-                        withAnimation {
-                            viewModel.clearHistory()
+                        Task {
+                            await viewModel.clearAllHistory()
                         }
                     }) {
-                        Image(systemName: "trash")
-                            .font(.title3)
-                            .foregroundColor(.red)
+                        HStack(spacing: 4) {
+                            if viewModel.isDeletingMessage {
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                            } else {
+                                Image(systemName: "trash.fill")
+                                    .font(.caption)
+                            }
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.red)
+                        .cornerRadius(16)
                     }
+                    .disabled(viewModel.isDeletingMessage)
                 }
             }
             .padding(.horizontal)
