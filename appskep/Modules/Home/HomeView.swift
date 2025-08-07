@@ -9,15 +9,328 @@ import SwiftUI
 
 struct HomeView: View {
   @EnvironmentObject var authManager: AuthManager
+  @StateObject private var myClassViewModel = MyClassViewModel()
+  @StateObject private var searchViewModel = SearchViewModel()
+  @StateObject private var notificationViewModel = NotificationViewModel()
+  @State private var showNotifications = false
+  
+  private let newClassesColumns: [GridItem] = [
+    GridItem(.flexible(), spacing: 16),
+    GridItem(.flexible(), spacing: 16)
+  ]
   
   var body: some View {
     NavigationStack {
       ScrollView {
         VStack(alignment: .leading, spacing: 24) {
-          Text("hai")
+          // Header dengan salam dan notifikasi
+          headerView
+          
+          // Promo Banner
+          promoBanner
+          
+          // Kelas Saya Section
+          myClassesSection
+          
+          // Kelas Terbaru Section
+          newClassesSection
+        }
+        .padding()
+      }
+      .navigationBarHidden(true)
+      .onAppear {
+        Task {
+          await myClassViewModel.fetchMyClasses()
+          await searchViewModel.fetchUkomClasses()
+          await notificationViewModel.fetchUnreadCount()
+        }
+        setupUnreadCountAutoRefresh()
+      }
+      .onDisappear {
+        stopUnreadCountAutoRefresh()
+      }
+      .sheet(isPresented: $showNotifications) {
+        NavigationStack {
+          NotificationView()
+            .environmentObject(notificationViewModel)
         }
       }
     }
+  }
+  
+  // Add timer for unread count auto refresh
+      @State private var unreadCountTimer: Timer?
+      
+      // MARK: - Auto Refresh Functions for Unread Count
+      private func setupUnreadCountAutoRefresh() {
+          // Stop existing timer first
+          stopUnreadCountAutoRefresh()
+          
+          // Start new timer for unread count refresh every 60 seconds
+          unreadCountTimer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { _ in
+              Task {
+                  await notificationViewModel.fetchUnreadCount()
+              }
+          }
+      }
+      
+      private func stopUnreadCountAutoRefresh() {
+          unreadCountTimer?.invalidate()
+          unreadCountTimer = nil
+      }
+  
+  private var headerView: some View {
+    HStack {
+      VStack(alignment: .leading, spacing: 4) {
+        // Ambil kata depan saja dari nama
+        Text("Hai \(getFirstName()),")
+          .font(.title2)
+          .fontWeight(.bold)
+        
+        Text("Sudahkah kamu latihan soal hari ini?")
+          .font(.subheadline)
+          .foregroundColor(.secondary)
+      }
+      
+      Spacer()
+      
+      Button(action: {
+        showNotifications = true
+      }) {
+        ZStack {
+          Image(systemName: "bell.fill")
+            .font(.title2)
+            .foregroundColor(.main)
+            .frame(width: 40, height: 40)
+            .background(Color.main.opacity(0.1))
+            .cornerRadius(20)
+          
+          // Badge for unread notifications
+          if notificationViewModel.unreadCount > 0 {
+            Text("\(notificationViewModel.unreadCount)")
+              .font(.caption2)
+              .fontWeight(.bold)
+              .foregroundColor(.white)
+              .frame(minWidth: 16, minHeight: 16)
+              .background(Color.red)
+              .cornerRadius(8)
+              .offset(x: 12, y: -12)
+          }
+        }
+      }
+    }
+  }
+  
+  private var promoBanner: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Text("Beli Banyak, Diskon Lebih Besar!")
+        .font(.headline)
+        .fontWeight(.bold)
+        .foregroundColor(.white)
+      
+      Text("Semakin banyak belajar, makin besar diskonnya!")
+        .font(.subheadline)
+        .foregroundColor(.white.opacity(0.9))
+      
+      Button(action: {
+        // Navigate to search/promo page
+      }) {
+        Text("Beli sekarang")
+          .font(.caption)
+          .fontWeight(.semibold)
+          .foregroundColor(.blue)
+          .padding(.horizontal, 16)
+          .padding(.vertical, 8)
+          .background(Color.white)
+          .cornerRadius(20)
+      }
+    }
+    .padding()
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(
+      LinearGradient(
+        colors: [Color.blue.opacity(0.9), Color.blue.opacity(0.7)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+      )
+    )
+    .cornerRadius(16)
+    .overlay(
+      // Decorative elements - buku dan pensil
+      HStack {
+        Spacer()
+        VStack {
+          Spacer()
+          HStack {
+            // Buku
+            Image(systemName: "book.fill")
+              .font(.system(size: 25))
+              .foregroundColor(.white.opacity(0.4))
+              .rotationEffect(.degrees(-15))
+            
+            // Pensil
+            Image(systemName: "pencil")
+              .font(.system(size: 30))
+              .foregroundColor(.white.opacity(0.3))
+              .rotationEffect(.degrees(25))
+          }
+          .padding(.trailing, 20)
+          .padding(.bottom, 10)
+        }
+      }
+    )
+  }
+  
+  private var myClassesSection: some View {
+    VStack(alignment: .leading, spacing: 16) {
+      HStack {
+        Text("Kelas saya")
+          .font(.headline)
+          .fontWeight(.bold)
+        
+        Spacer()
+        
+        if !myClassViewModel.myPaidClasses.isEmpty {
+          NavigationLink("Lihat semua", destination: MyClassView())
+            .font(.caption)
+            .foregroundColor(.main)
+        }
+      }
+      
+      if myClassViewModel.isLoading && myClassViewModel.myPaidClasses.isEmpty {
+        ProgressView()
+          .frame(maxWidth: .infinity)
+          .padding()
+      } else if myClassViewModel.myPaidClasses.isEmpty {
+        EmptyMyClassesView()
+      } else {
+        ScrollView(.horizontal, showsIndicators: false) {
+          HStack(spacing: 16) {
+            ForEach(myClassViewModel.myPaidClasses.prefix(5)) { order in
+              NavigationLink(destination: MyClassDetailView(order: order)) {
+                MyClassCardView(order: order)
+              }
+              .buttonStyle(PlainButtonStyle())
+            }
+          }
+          .padding(.horizontal, 4)
+        }
+      }
+    }
+  }
+  
+  private var newClassesSection: some View {
+    VStack(alignment: .leading, spacing: 16) {
+      HStack {
+        Text("Kelas terbaru")
+          .font(.headline)
+          .fontWeight(.bold)
+        
+        Spacer()
+        
+        NavigationLink("Lihat semua", destination: SearchClassView())
+          .font(.caption)
+          .foregroundColor(.main)
+      }
+      
+      if searchViewModel.isLoading && searchViewModel.ukomClasses.isEmpty {
+        ProgressView()
+          .frame(maxWidth: .infinity)
+          .padding()
+      } else {
+        LazyVGrid(columns: newClassesColumns, spacing: 16) {
+          ForEach(searchViewModel.ukomClasses.prefix(4)) { ukomClass in
+            NavigationLink(destination: SearchClassDetailView(classId: ukomClass.id)) {
+              ClassCardView(ukomClass: ukomClass)
+            }
+            .buttonStyle(PlainButtonStyle())
+          }
+        }
+      }
+    }
+  }
+  
+  // Helper function untuk mengambil nama depan saja
+  private func getFirstName() -> String {
+    guard let name = authManager.currentUser?.name else { return "User" }
+    return String(name.split(separator: " ").first ?? "User")
+  }
+}
+
+// MARK: - Supporting Views
+
+struct MyClassCardView: View {
+  let order: MyOrder
+  
+  var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      // Icon
+      Image(systemName: "book.closed.fill")
+        .font(.title2)
+        .foregroundColor(.white)
+        .frame(width: 40, height: 40)
+        .background(Color.main)
+        .cornerRadius(20)
+      
+      VStack(alignment: .leading, spacing: 4) {
+        Text(order.kelas.name)
+          .font(.headline)
+          .fontWeight(.semibold)
+          .foregroundColor(.white)
+          .lineLimit(2)
+          .multilineTextAlignment(.leading)
+        
+        Text(order.kelas.description)
+          .font(.caption)
+          .foregroundColor(.white.opacity(0.8))
+          .lineLimit(2)
+          .multilineTextAlignment(.leading)
+      }
+      
+      Spacer()
+    }
+    .padding()
+    .frame(width: 200, height: 140)
+    .background(
+      LinearGradient(
+        colors: [Color.main, Color.main.opacity(0.8)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+      )
+    )
+    .cornerRadius(16)
+    .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
+  }
+}
+
+struct EmptyMyClassesView: View {
+  var body: some View {
+    VStack(spacing: 12) {
+      Image(systemName: "book.closed")
+        .font(.system(size: 40))
+        .foregroundColor(.secondary)
+      
+      Text("Belum ada kelas")
+        .font(.headline)
+        .foregroundColor(.secondary)
+      
+      Text("Beli kelas untuk mulai belajar")
+        .font(.caption)
+        .foregroundColor(.secondary)
+        .multilineTextAlignment(.center)
+      
+      NavigationLink("Cari kelas", destination: SearchClassView())
+        .font(.caption)
+        .foregroundColor(.white)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Color.main)
+        .cornerRadius(20)
+    }
+    .padding()
+    .frame(maxWidth: .infinity)
+    .background(Color(.systemGray6))
+    .cornerRadius(16)
   }
 }
 
@@ -25,4 +338,3 @@ struct HomeView: View {
   HomeView()
     .environmentObject(AuthManager.shared)
 }
-

@@ -10,6 +10,7 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var showLogoutConfirmation = false
+    @State private var showEditProfile = false
 
     var body: some View {
         NavigationStack {
@@ -24,15 +25,15 @@ struct ProfileView: View {
                             ProfileRowView(iconName: "clock", title: "Riwayat Try Out")
                         }
                         
-                        NavigationLink(destination: Text("Transaksi View")) {
+                        NavigationLink(destination: TransactionView()) {
                             ProfileRowView(iconName: "creditcard", title: "Transaksi")
                         }
                         
-                        NavigationLink(destination: Text("Keamanan & Kata Sandi View")) {
+                        NavigationLink(destination: ChangePasswordView()) {
                             ProfileRowView(iconName: "lock.shield", title: "Keamanan & Kata Sandi")
                         }
                     }
-                    
+
                     // Logout Button
                     logoutButton
                     
@@ -50,6 +51,10 @@ struct ProfileView: View {
             } message: {
                 Text("Apakah Anda yakin ingin keluar dari akun Anda?")
             }
+            .sheet(isPresented: $showEditProfile) {
+                EditProfileView()
+                    .environmentObject(authManager)
+            }
         }
     }
 
@@ -64,12 +69,18 @@ struct ProfileView: View {
                     .foregroundColor(.secondary)
             }
             Spacer()
-            Button(action: {}) {
-                Image(systemName: "ellipsis")
+            Button(action: {
+                showEditProfile = true
+            }) {
+                Image(systemName: "square.and.pencil")
                     .font(.title2)
                     .foregroundColor(.primary)
             }
         }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
     }
 
     private var logoutButton: some View {
@@ -119,6 +130,6 @@ struct ProfileRowView: View {
 }
 
 #Preview {
-  ProfileView()
-    .environmentObject(AuthManager.shared)
+    ProfileView()
+        .environmentObject(AuthManager.shared)
 }

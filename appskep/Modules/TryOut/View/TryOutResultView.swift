@@ -202,7 +202,7 @@ struct TryOutResultView: View {
       started_at: "2025-08-01 21:13:41",
       finished_at: "2025-08-01 21:43:47",
       score: 85,
-      paket: Paket(id: 1, name: "Try Out Appskep Part 1", description: "Test", duration: 150),
+      paket: Paket(id: 1, name: "Try Out Appskep Part 1", description: "Test", duration: 150, totalQuestions: 4),
       soals: [],
       answers: []
     )

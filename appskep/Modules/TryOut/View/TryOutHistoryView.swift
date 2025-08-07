@@ -16,15 +16,21 @@ struct TryOutHistoryView: View {
                 emptyStateView
             } else {
                 ForEach(viewModel.historyItems) { item in
-                    NavigationLink(destination: PembahasanView(tryOutId: item.id)) {
+                    // Only allow navigation if try out is completed
+                    if item.finished_at != nil {
+                        NavigationLink(destination: PembahasanView(tryOutId: item.id)) {
+                            TryOutHistoryRow(item: item)
+                        }
+                    } else {
                         TryOutHistoryRow(item: item)
+                            .opacity(0.6) // Show incomplete try outs as disabled
                     }
-                    .onAppear {
-                        // Load more data when the last item appears
-                        if item.id == viewModel.historyItems.last?.id {
-                            Task {
-                                await viewModel.fetchHistory()
-                            }
+                }
+                .onAppear {
+                    // Load more when the last item appears
+                    if let lastItem = viewModel.historyItems.last {
+                        Task {
+                            await viewModel.fetchHistory()
                         }
                     }
                 }
@@ -76,7 +82,22 @@ struct TryOutHistoryRow: View {
                     .font(.headline)
                     .lineLimit(2)
                 
-                Text(formatDate(item.finished_at))
+                // Show different info based on completion status
+                if let finishedAt = item.finished_at {
+                    Text(formatDate(finishedAt))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else {
+                    HStack {
+                        Image(systemName: "clock")
+                            .foregroundColor(.orange)
+                        Text("Belum selesai")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                    }
+                }
+                
+                Text("Dimulai: \(formatDate(item.started_at))")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -84,13 +105,22 @@ struct TryOutHistoryRow: View {
             Spacer()
             
             VStack(alignment: .trailing) {
-                Text("\(item.score)")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.main)
-                Text("Skor")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                if let score = item.score {
+                    Text("\(score)")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.main)
+                    Text("Skor")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else {
+                    Image(systemName: "minus.circle")
+                        .font(.title2)
+                        .foregroundColor(.gray)
+                    Text("Belum selesai")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
             }
         }
         .padding(.vertical, 8)
@@ -102,6 +132,7 @@ struct TryOutHistoryRow: View {
         if let date = formatter.date(from: dateString) {
             formatter.dateStyle = .medium
             formatter.timeStyle = .short
+            formatter.locale = Locale(identifier: "id_ID")
             return formatter.string(from: date)
         }
         return "N/A"

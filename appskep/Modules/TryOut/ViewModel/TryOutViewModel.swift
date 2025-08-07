@@ -64,37 +64,45 @@ class TryOutViewModel: ObservableObject {
   }
   
   // MARK: - Public Methods (Actions from View)
-  
   func startTryOut(orderId: Int, paketId: Int) async -> Bool {
-    isLoading = true
-    errorMessage = nil
-    
-    let request = StartTryOutRequest(order_id: orderId, paket_id: paketId)
-    
-    do {
-      let bodyData = try JSONEncoder().encode(request)
-      let response: StartTryOutResponse = try await APIService.shared.performRequest(
-        endpoint: .startTryOut,
-        method: .POST,
-        body: bodyData,
-        responseType: StartTryOutResponse.self
-      )
+      isLoading = true
+      errorMessage = nil
       
-      if response.success, let sessionData = response.data {
-        self.tryOutSession = sessionData
-        print("✅ TryOut session created with ID: \(sessionData.id)")
-        isLoading = false
-        return true
-      } else {
-        self.errorMessage = response.message
-        isLoading = false
-        return false
+      let request = StartTryOutRequest(order_id: orderId, paket_id: paketId)
+      
+      do {
+          let bodyData = try JSONEncoder().encode(request)
+          let response: StartTryOutResponse = try await APIService.shared.performRequest(
+              endpoint: .startTryOut,
+              method: .POST,
+              body: bodyData,
+              responseType: StartTryOutResponse.self
+          )
+          
+          if response.success, let sessionData = response.data {
+              self.tryOutSession = sessionData
+              isLoading = false
+              return true
+          } else {
+              // Enhanced error handling
+              let message = response.error ?? response.message
+              if message.contains("already finished") {
+                  errorMessage = "Try-out sudah selesai. Silakan cek hasil atau coba retry jika diizinkan."
+              } else if message.contains("max attempts") {
+                  errorMessage = "Anda telah mencapai maksimal percobaan untuk try-out ini."
+              } else if message.contains("in progress") {
+                  errorMessage = "Try-out sedang berlangsung. Lanjutkan sesi yang ada."
+              } else {
+                  errorMessage = message
+              }
+              isLoading = false
+              return false
+          }
+      } catch {
+          errorMessage = "Gagal memulai try-out: \(error.localizedDescription)"
+          isLoading = false
+          return false
       }
-    } catch {
-      self.errorMessage = error.localizedDescription
-      isLoading = false
-      return false
-    }
   }
   
   func fetchTryOutDetail(tryOutId: Int) async {

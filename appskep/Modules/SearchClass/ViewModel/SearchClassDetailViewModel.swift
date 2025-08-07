@@ -55,11 +55,18 @@ class SearchClassDetailViewModel: ObservableObject {
                 responseType: PaketResponse.self
             )
             if response.success {
-                self.pakets = response.data
+                // Handle null data safely
+              self.pakets = response.data
+                print("✅ Fetched \(self.pakets.count) pakets for class \(classId)")
+            } else {
+                print("❌ Failed to fetch pakets: \(response.message)")
+                self.pakets = []
             }
         } catch {
-            // Silently fail or handle error as needed
-            print("Failed to fetch pakets: \(error.localizedDescription)")
+            // Handle error gracefully
+            print("❌ Error fetching pakets: \(error.localizedDescription)")
+            self.pakets = []
+            // Don't set errorMessage here to avoid disrupting the main UI
         }
     }
     
@@ -67,8 +74,7 @@ class SearchClassDetailViewModel: ObservableObject {
         let orderRequest = OrderRequest(kelas_id: classId)
         
         do {
-          let bodyData = try JSONEncoder().encode(orderRequest)
-          
+            let bodyData = try JSONEncoder().encode(orderRequest)
             let response: OrderResponse = try await APIService.shared.performRequest(
                 endpoint: .createOrder,
                 method: .POST,

@@ -101,9 +101,17 @@ struct PaketRowView: View {
     VStack(alignment: .leading) {
       Text(paket.name)
         .font(.headline)
-      Text("\(paket.duration) menit • 50 soal") // Assuming 50 questions, adjust as needed
-        .font(.subheadline)
-        .foregroundColor(.secondary)
+      HStack {
+        Text("\(paket.duration) menit") // Assuming 50 questions, adjust as needed
+          .font(.subheadline)
+          .foregroundColor(.secondary)
+        Text("•")
+          .font(.subheadline)
+          .foregroundColor(.secondary)
+        Text("\(paket.totalQuestions ?? 0) soal")
+          .font(.subheadline)
+          .foregroundColor(.secondary)
+      }
     }
     .padding()
     .frame(maxWidth: .infinity, alignment: .leading)

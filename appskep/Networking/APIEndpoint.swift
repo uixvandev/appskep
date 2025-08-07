@@ -25,10 +25,19 @@ enum APIEndpoint {
   case getChatHistory(page: Int, limit: Int, soalId: Int)
   case deleteChatMessage(id: Int)
   case getTryOutHistory(page: Int, limit: Int)
+  case getNotifications(page: Int, limit: Int)
+  case getUnreadCount
+  case markNotificationAsRead(id: Int)
+  case getOrderHistory(page: Int, limit: Int)
+  case getOrderDetail(id: Int)
+  case checkClassAccess(kelasId: Int)
+  case checkRetryEligibility(orderId: Int, paketId: Int)
+  case updateProfile
+  case changePassword
   
   var requiresAuth: Bool {
     switch self {
-    case .createOrder, .getMyOrders, .startTryOut, .getTryOutDetail, .submitAllAnswers, .finishTryOut, .getTryOutResult, .getPembahasan, .sendChatMessage, .getChatHistory, .deleteChatMessage, .getTryOutHistory:
+    case .createOrder, .getMyOrders, .startTryOut, .getTryOutDetail, .submitAllAnswers, .finishTryOut, .getTryOutResult, .getPembahasan, .sendChatMessage, .getChatHistory, .deleteChatMessage, .getTryOutHistory, .getNotifications, .getUnreadCount, .markNotificationAsRead, .getOrderHistory, .getOrderDetail, .checkClassAccess, .checkRetryEligibility, .updateProfile, .changePassword:
       return true
     default:
       return false
@@ -75,6 +84,24 @@ enum APIEndpoint {
       return "/api/v1/chat/history/\(id)"
     case .getTryOutHistory(let page, let limit):
       return "/api/v1/tryouts/history?page=\(page)&limit=\(limit)"
+    case .getNotifications(let page, let limit):
+      return "/api/v1/notifications?page=\(page)&limit=\(limit)"
+    case .getUnreadCount:
+      return "/api/v1/notifications/unread-count"
+    case .markNotificationAsRead(let id):
+      return "/api/v1/notifications/\(id)/read"
+    case .getOrderHistory(let page, let limit):
+      return "/api/v1/orders/my-orders?page=\(page)&limit=\(limit)"
+    case .getOrderDetail(let id):
+      return "/api/v1/orders/\(id)"
+    case .checkClassAccess(let kelasId):
+      return "/api/v1/orders/check-access/\(kelasId)"
+    case .checkRetryEligibility(let orderId, let paketId):
+      return "/api/v1/tryouts/check-retry?order_id=\(orderId)&paket_id=\(paketId)"
+    case .updateProfile:
+      return "/api/v1/users/profile"
+    case .changePassword:
+      return "/api/v1/users/change-password"
     }
   }
   

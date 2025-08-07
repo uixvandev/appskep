@@ -1,0 +1,185 @@
+//
+//  PaymentWebView.swift
+//  appskep
+//
+//  Created by irfan wahendra on 03/08/25.
+//
+
+import SwiftUI
+import WebKit
+
+struct PaymentWebView: View {
+    let url: URL
+    @EnvironmentObject var viewModel: TransactionViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var isLoading = true
+    @State private var canGoBack = false
+    @State private var canGoForward = false
+    @State private var showCloseConfirmation = false
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Progress Bar
+                if isLoading {
+                    ProgressView()
+                        .frame(height: 4)
+                        .frame(maxWidth: .infinity)
+                        .tint(.main)
+                }
+                
+                // WebView
+                WebViewRepresentable(
+                    url: url,
+                    isLoading: $isLoading,
+                    canGoBack: $canGoBack,
+                    canGoForward: $canGoForward
+                ) { success, orderID in
+                    Task {
+                        await viewModel.handlePaymentCallback(success: success, orderID: orderID)
+                        dismiss()
+                    }
+                }
+            }
+            .navigationTitle("Pembayaran")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Tutup") {
+                        showCloseConfirmation = true
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    HStack {
+                        Button(action: {
+                            // Go back in webview
+                        }) {
+                            Image(systemName: "chevron.left")
+                                .foregroundColor(canGoBack ? .main : .gray)
+                        }
+                        .disabled(!canGoBack)
+                        
+                        Button(action: {
+                            // Go forward in webview
+                        }) {
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(canGoForward ? .main : .gray)
+                        }
+                        .disabled(!canGoForward)
+                    }
+                }
+            }
+        }
+        .alert("Batalkan Pembayaran", isPresented: $showCloseConfirmation) {
+            Button("Lanjutkan Pembayaran", role: .cancel) { }
+            Button("Batalkan", role: .destructive) {
+                Task {
+                    await viewModel.handlePaymentCallback(success: false)
+                    dismiss()
+                }
+            }
+        } message: {
+            Text("Apakah Anda yakin ingin membatalkan proses pembayaran?")
+        }
+    }
+}
+
+struct WebViewRepresentable: UIViewRepresentable {
+    let url: URL
+    @Binding var isLoading: Bool
+    @Binding var canGoBack: Bool
+    @Binding var canGoForward: Bool
+    let onPaymentComplete: (Bool, String?) -> Void
+    
+    func makeUIView(context: Context) -> WKWebView {
+        let webView = WKWebView()
+        webView.navigationDelegate = context.coordinator
+        webView.allowsBackForwardNavigationGestures = true
+        
+        let request = URLRequest(url: url)
+        webView.load(request)
+        
+        return webView
+    }
+    
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        canGoBack = webView.canGoBack
+        canGoForward = webView.canGoForward
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, WKNavigationDelegate {
+        let parent: WebViewRepresentable
+        
+        init(_ parent: WebViewRepresentable) {
+            self.parent = parent
+        }
+        
+        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            parent.isLoading = true
+        }
+        
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            parent.isLoading = false
+            parent.canGoBack = webView.canGoBack
+            parent.canGoForward = webView.canGoForward
+            
+            // Check if payment completed
+            if let url = webView.url {
+                checkPaymentStatus(url: url)
+            }
+        }
+        
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            parent.isLoading = false
+        }
+        
+        private func checkPaymentStatus(url: URL) {
+            let urlString = url.absoluteString
+            
+            // Check for success indicators
+            if urlString.contains("status_code=200") ||
+               urlString.contains("transaction_status=settlement") ||
+               urlString.contains("success") {
+                
+                // Extract order ID if available
+                let orderID = extractOrderID(from: urlString)
+                parent.onPaymentComplete(true, orderID)
+                
+            } else if urlString.contains("status_code=201") ||
+                     urlString.contains("transaction_status=pending") {
+                
+                // Payment pending
+                let orderID = extractOrderID(from: urlString)
+                parent.onPaymentComplete(true, orderID)
+                
+            } else if urlString.contains("status_code=202") ||
+                     urlString.contains("transaction_status=cancel") ||
+                     urlString.contains("cancel") {
+                
+                // Payment cancelled
+                parent.onPaymentComplete(false, nil)
+            }
+        }
+        
+        private func extractOrderID(from urlString: String) -> String? {
+            // Extract order_id from URL parameters
+            guard let url = URL(string: urlString),
+                  let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+                  let queryItems = components.queryItems else {
+                return nil
+            }
+            
+            return queryItems.first { $0.name == "order_id" }?.value
+        }
+    }
+}
+
+#Preview {
+    PaymentWebView(url: URL(string: "https://simulator.sandbox.midtrans.com")!)
+        .environmentObject(TransactionViewModel())
+}
