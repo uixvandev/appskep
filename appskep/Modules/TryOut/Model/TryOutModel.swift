@@ -7,7 +7,6 @@
 
 import Foundation
 
-
 // MARK: - Start TryOut
 struct StartTryOutRequest: Codable {
   let order_id: Int
@@ -121,7 +120,6 @@ struct AnswerPilihanJawaban: Codable {
   let option_text: String
   let is_correct: Bool
 }
-
 
 // MARK: - Try Out Results API
 struct TryOutResultsResponse: Codable {
@@ -300,6 +298,22 @@ struct RetryEligibilityData: Codable {
     next_retry_at = try container.decodeIfPresent(String.self, forKey: .next_retry_at)
   }
   
+  // Add encode method to satisfy Codable
+  func encode(to encoder: Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    
+    try container.encode(attempt_number, forKey: .attempt_number)
+    try container.encode(total_attempts, forKey: .total_attempts)
+    try container.encode(max_attempts, forKey: .max_attempts)
+    try container.encode(can_retry, forKey: .can_retry)
+    try container.encode(has_passed, forKey: .has_passed)
+    try container.encodeIfPresent(best_score, forKey: .best_score)
+    try container.encodeIfPresent(can_start_new, forKey: .can_start_new)
+    try container.encodeIfPresent(is_unlimited, forKey: .is_unlimited)
+    try container.encodeIfPresent(last_attempt, forKey: .last_attempt)
+    try container.encodeIfPresent(next_retry_at, forKey: .next_retry_at)
+  }
+  
   // Computed properties for UI logic based on actual API data
   var computedCanStartNew: Bool {
     // If can_start_new is not provided, determine from total_attempts
@@ -322,7 +336,8 @@ struct RetryEligibilityData: Codable {
   }
 }
 
-struct LastAttemptInfo: Codable {
+// MARK: - Supporting Types (Single definition only)
+struct LastAttemptInfo: Codable, Identifiable {
   let id: Int
   let score: Int
   let passed: Bool
@@ -332,10 +347,17 @@ struct LastAttemptInfo: Codable {
 
 // MARK: - Try Out Action State
 enum TryOutActionState {
-  case canStart // First time or can retry
-  case showResult(LastAttemptInfo) // Show last result with retry option
-  case maxAttemptsReached(Int) // Show best score, no retry
-  case waitingRetry(Date) // Show countdown to next retry
   case loading
+  case canStart
+  case showResult(LastAttemptInfo)
+  case maxAttemptsReached(bestScore: Int)
+  case waitingRetry(nextRetryDate: Date)
   case error(String)
+  
+  var lastAttempt: LastAttemptInfo? {
+    if case .showResult(let attempt) = self {
+      return attempt
+    }
+    return nil
+  }
 }

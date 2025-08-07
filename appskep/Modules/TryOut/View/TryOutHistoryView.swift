@@ -16,23 +16,7 @@ struct TryOutHistoryView: View {
                 emptyStateView
             } else {
                 ForEach(viewModel.historyItems) { item in
-                    // Only allow navigation if try out is completed
-                    if item.finished_at != nil {
-                        NavigationLink(destination: PembahasanView(tryOutId: item.id)) {
-                            TryOutHistoryRow(item: item)
-                        }
-                    } else {
-                        TryOutHistoryRow(item: item)
-                            .opacity(0.6) // Show incomplete try outs as disabled
-                    }
-                }
-                .onAppear {
-                    // Load more when the last item appears
-                    if let lastItem = viewModel.historyItems.last {
-                        Task {
-                            await viewModel.fetchHistory()
-                        }
-                    }
+                    historyRowView(for: item)
                 }
             }
             
@@ -46,12 +30,39 @@ struct TryOutHistoryView: View {
         .onAppear {
             if viewModel.historyItems.isEmpty {
                 Task {
-                    await viewModel.fetchHistory()
+                    await viewModel.refreshHistory()
                 }
             }
         }
         .refreshable {
             await viewModel.refreshHistory()
+        }
+    }
+    
+    @ViewBuilder
+    private func historyRowView(for item: TryOutHistoryItem) -> some View {
+        if item.finished_at != nil {
+            NavigationLink(destination: PembahasanView(tryOutId: item.id)) {
+                TryOutHistoryRow(item: item)
+            }
+            .onAppear {
+                loadMoreIfNeeded(for: item)
+            }
+        } else {
+            TryOutHistoryRow(item: item)
+                .opacity(0.6)
+                .onAppear {
+                    loadMoreIfNeeded(for: item)
+                }
+        }
+    }
+    
+    private func loadMoreIfNeeded(for item: TryOutHistoryItem) {
+        // Load more data when the last item appears
+        if item.id == viewModel.historyItems.last?.id {
+            Task {
+                await viewModel.fetchHistory()
+            }
         }
     }
     
@@ -82,28 +93,25 @@ struct TryOutHistoryRow: View {
                     .font(.headline)
                     .lineLimit(2)
                 
-                // Show different info based on completion status
-                if let finishedAt = item.finished_at {
-                    Text(formatDate(finishedAt))
+                // Tampilkan status berdasarkan finished_at
+                if item.finished_at != nil {
+                    Text("Selesai: \(formatDate(item.finished_at))")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 } else {
                     HStack {
-                        Image(systemName: "clock")
+                        Image(systemName: "clock.arrow.circlepath")
                             .foregroundColor(.orange)
-                        Text("Belum selesai")
+                        Text("Sedang Dikerjakan")
                             .font(.caption)
                             .foregroundColor(.orange)
                     }
                 }
-                
-                Text("Dimulai: \(formatDate(item.started_at))")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
             }
             
             Spacer()
             
+            // Tampilkan skor jika ada
             VStack(alignment: .trailing) {
                 if let score = item.score {
                     Text("\(score)")
@@ -114,10 +122,11 @@ struct TryOutHistoryRow: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 } else {
-                    Image(systemName: "minus.circle")
+                    Text("-")
                         .font(.title2)
+                        .fontWeight(.bold)
                         .foregroundColor(.gray)
-                    Text("Belum selesai")
+                    Text("N/A")
                         .font(.caption)
                         .foregroundColor(.gray)
                 }
@@ -126,7 +135,10 @@ struct TryOutHistoryRow: View {
         .padding(.vertical, 8)
     }
     
-    private func formatDate(_ dateString: String) -> String {
+    // Update formatDate untuk menerima String?
+    private func formatDate(_ dateString: String?) -> String {
+        guard let dateString = dateString else { return "N/A" }
+        
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         if let date = formatter.date(from: dateString) {
