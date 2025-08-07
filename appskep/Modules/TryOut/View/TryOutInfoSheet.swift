@@ -8,512 +8,605 @@
 import SwiftUI
 
 struct TryOutInfoSheet: View {
-  let paket: Paket
-  let orderId: Int
-  
-  @StateObject private var viewModel = TryOutViewModel()
-  @EnvironmentObject private var tryOutCoordinator: TryOutCoordinator
-  @Environment(\.dismiss) private var dismiss
-  
-  // State for retry eligibility
-  @State private var actionState: TryOutActionState = .loading
-  @State private var retryData: RetryEligibilityData?
-  @State private var showRetryConfirmation = false
-  @State private var showResultDetail = false
-  @State private var showMaxAttemptsAlert = false
-  @State private var actualTryOutId: Int?
-  var body: some View {
-    ZStack {
-      // Background gradient
-      LinearGradient(
-        gradient: Gradient(colors: [Color(.systemBackground), Color(.systemGray6)]),
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-      )
-      .ignoresSafeArea()
-      
-      ScrollView {
-        VStack(spacing: 24) {
-          // Hero Section
-          heroSection
-          
-          // Quick Info Cards
-          quickInfoGrid
-          
-          // Procedure Card
-          procedureCard
-          
-          // Results Card (if available)
-          if let retryData = retryData, retryData.total_attempts > 0 {
-            resultsCard
-          }
-          
-          // Spacer for floating button
-          Spacer(minLength: 100)
+    let paket: Paket
+    let orderId: Int
+    
+    @StateObject private var viewModel = TryOutViewModel()
+    @EnvironmentObject private var tryOutCoordinator: TryOutCoordinator
+    @Environment(\.dismiss) private var dismiss
+    
+    // State for retry eligibility
+    @State private var actionState: TryOutActionState = .loading
+    @State private var retryData: RetryEligibilityData?
+    @State private var showRetryConfirmation = false
+    @State private var showResultDetail = false
+    @State private var showMaxAttemptsAlert = false
+    @State private var actualTryOutId: Int?
+    
+    var body: some View {
+        ZStack {
+            // Background gradient
+            LinearGradient(
+                gradient: Gradient(colors: [Color(.systemBackground), Color(.systemGray6)]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+            
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Hero Section
+                    heroSection
+                    
+                    // Quick Info Cards
+                    quickInfoGrid
+                    
+                    // Procedure Card
+                    procedureCard
+                    
+                    // Results Card (if available)
+                    if let retryData = retryData, retryData.total_attempts > 0 {
+                        resultsCard
+                    }
+                }
+                .padding()
+                .padding(.bottom, getBottomPadding()) // Dynamic padding based on action state
+            }
+            
+            // Floating Action Button
+            VStack {
+                Spacer()
+                actionSection
+                    .padding(.horizontal)
+                    .padding(.top, 16)
+                    .padding(.bottom, 34) // Safe area padding
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
+                    .padding(.horizontal)
+                    .padding(.bottom, 16)
+            }
         }
-        .padding()
-      }
-      
-      // Floating Action Button
-      VStack {
-        Spacer()
-        actionSection
-          .padding()
-          .background(.ultraThinMaterial)
-          .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-          .padding()
-          .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
-      }
-    }
-    .navigationTitle("Detail Try Out")
-    .navigationBarTitleDisplayMode(.inline)
-    .navigationBarBackButtonHidden(true)
-    .toolbar {
-      ToolbarItem(placement: .navigationBarLeading) {
-        Button(action: { dismiss() }) {
-          HStack(spacing: 4) {
-            Image(systemName: "chevron.left")
-              .font(.system(size: 16, weight: .semibold))
-            Text("Kembali")
-          }
-          .foregroundColor(.main)
+        .navigationTitle("Detail Try Out")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: { dismiss() }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Kembali")
+                    }
+                    .foregroundColor(.main)
+                }
+            }
         }
-      }
-    }
-    .onAppear {
-      Task { await checkRetryEligibility() }
-    }
-    .alert("Maksimal Percobaan", isPresented: $showMaxAttemptsAlert) {
-      Button("Lihat Hasil Terbaik") { showResultDetail = true }
-      Button("Tutup") { dismiss() }
-    } message: {
-      Text("Anda telah mencapai batas maksimal percobaan untuk paket ini.")
-    }
-    .confirmationDialog("Konfirmasi Mulai", isPresented: $showRetryConfirmation, titleVisibility: .visible) {
-      Button("Mulai Sekarang", role: .destructive) {
-        Task { await startTryOut() }
-      }
-      Button("Batal", role: .cancel) {}
-    } message: {
-      Text("Try out hanya dapat dilakukan sekali. Pastikan Anda siap karena waktu akan langsung berjalan dan tidak bisa dijeda.")
-    }
-    .sheet(isPresented: $showResultDetail) {
+        .onAppear {
+            Task { await checkRetryEligibility() }
+        }
+        .alert("Maksimal Percobaan", isPresented: $showMaxAttemptsAlert) {
+            Button("Lihat Hasil Terbaik") { showResultDetail = true }
+            Button("Tutup") { dismiss() }
+        } message: {
+            Text("Anda telah mencapai batas maksimal percobaan untuk paket ini.")
+        }
+        .confirmationDialog("Konfirmasi Mulai", isPresented: $showRetryConfirmation, titleVisibility: .visible) {
+            Button("Mulai Sekarang", role: .destructive) {
+                Task { await startTryOut() }
+            }
+            Button("Batal", role: .cancel) {}
+        } message: {
+            Text("Try out hanya dapat dilakukan sekali. Pastikan Anda siap karena waktu akan langsung berjalan dan tidak bisa dijeda.")
+        }
+        .sheet(isPresented: $showResultDetail) {
             if let tryOutId = actualTryOutId {
                 TryOutResultDetailSheet(
                     attempt: createLastAttemptInfo() ?? LastAttemptInfo(id: 0, score: 0, passed: false, finished_at: "", status: ""),
-                    actualTryOutId: tryOutId  // Pass the real try-out ID
+                    actualTryOutId: tryOutId
                 )
             }
         }
-  }
-  
-  // MARK: - UI Components
-  
-  private var heroSection: some View {
-    VStack(spacing: 16) {
-      // Icon
-      ZStack {
-        Circle()
-          .fill(LinearGradient(
-            gradient: Gradient(colors: [Color.main.opacity(0.8), Color.main]),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-          ))
-          .frame(width: 80, height: 80)
-        
-        Image(systemName: "doc.text.fill")
-          .font(.system(size: 32))
-          .foregroundColor(.white)
-      }
-      
-      // Title and badges
-      VStack(spacing: 12) {
-        Text(paket.name)
-          .font(.title2)
-          .fontWeight(.bold)
-          .multilineTextAlignment(.center)
-          .lineLimit(3)
-        
-        if let retryData = retryData {
-          statusBadgesRow(for: retryData)
+    }
+    
+    // MARK: - Helper Methods for Layout
+    
+    /// Calculate dynamic bottom padding based on action state
+    private func getBottomPadding() -> CGFloat {
+        switch actionState {
+        case .loading:
+            return 120 // Compact loading state
+        case .canStart:
+            return 180 // Warning card + action button
+        case .showResult:
+            return 200 // Success card + action button
+        case .maxAttemptsReached, .waitingRetry:
+            return 160 // Single card
+        case .error:
+            return 180 // Error card + retry button
         }
-      }
     }
-    .padding(.vertical)
-  }
-  
-  private var quickInfoGrid: some View {
-    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
-      QuickInfoCard(
-        icon: "clock.fill",
-        title: "Durasi",
-        value: "\(paket.duration)",
-        subtitle: "menit",
-        color: .blue
-      )
-      
-      QuickInfoCard(
-        icon: "questionmark.circle.fill",
-        title: "Soal",
-        value: "\(paket.totalQuestions ?? 50)",
-        subtitle: "pertanyaan",
-        color: .green
-      )
-      
-      QuickInfoCard(
-        icon: "arrow.clockwise",
-        title: "Kesempatan",
-        value: "1x",
-        subtitle: "percobaan",
-        color: .orange
-      )
-    }
-  }
-  
-  private var procedureCard: some View {
-    VStack(alignment: .leading, spacing: 16) {
-      // Header
-      HStack {
-        Image(systemName: "list.clipboard.fill")
-          .font(.title2)
-          .foregroundColor(.main)
-        
-        Text("Aturan & Prosedur")
-          .font(.headline)
-          .fontWeight(.bold)
-      }
-      
-      // Rules list
-      VStack(alignment: .leading, spacing: 12) {
-        ProcedureRow(
-          icon: "wifi",
-          text: "Pastikan koneksi internet stabil",
-          iconColor: .blue
-        )
-        
-        ProcedureRow(
-          icon: "play.circle.fill",
-          text: "Timer dimulai otomatis dan tidak dapat dijeda",
-          iconColor: .orange
-        )
-        
-        ProcedureRow(
-          icon: "checkmark.shield.fill",
-          text: "Jawaban tersimpan otomatis setiap kali dipilih",
-          iconColor: .green
-        )
-        
-        ProcedureRow(
-          icon: "exclamationmark.triangle.fill",
-          text: "Mode fullscreen - tidak dapat keluar hingga selesai",
-          iconColor: .red
-        )
-      }
-    }
-    .padding(20)
-    .background(Color(.systemBackground))
-    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
-  }
-  
-  private var resultsCard: some View {
-    VStack(alignment: .leading, spacing: 16) {
-      // Header
-      HStack {
-        Image(systemName: "chart.line.uptrend.xyaxis.circle.fill")
-          .font(.title2)
-          .foregroundColor(.main)
-        
-        Text("Hasil Anda")
-          .font(.headline)
-          .fontWeight(.bold)
-      }
-      
-      if let retryData = retryData {
-        HStack(spacing: 20) {
-          // Score display
-          VStack {
+    
+    // MARK: - UI Components (existing code remains the same)
+    
+    private var heroSection: some View {
+        VStack(spacing: 16) {
+            // Icon
             ZStack {
-              Circle()
-                .stroke(Color(.systemGray5), lineWidth: 8)
-                .frame(width: 80, height: 80)
-              
-              Circle()
-                .trim(from: 0, to: CGFloat(retryData.best_score ?? 0) / 100)
-                .stroke(
-                  retryData.has_passed ? Color.green : Color.red,
-                  style: StrokeStyle(lineWidth: 8, lineCap: .round)
-                )
-                .frame(width: 80, height: 80)
-                .rotationEffect(.degrees(-90))
-              
-              Text("\(retryData.best_score ?? 0)")
-                .font(.title3)
-                .fontWeight(.bold)
+                Circle()
+                    .fill(LinearGradient(
+                        gradient: Gradient(colors: [Color.main.opacity(0.8), Color.main]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ))
+                    .frame(width: 80, height: 80)
+                
+                Image(systemName: "doc.text.fill")
+                    .font(.system(size: 32))
+                    .foregroundColor(.white)
             }
             
-            Text("Skor")
-              .font(.caption)
-              .foregroundColor(.secondary)
-          }
-          
-          VStack(alignment: .leading, spacing: 8) {
-            // Status
+            // Title and badges
+            VStack(spacing: 12) {
+                Text(paket.name)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(3)
+                
+                if let retryData = retryData {
+                    statusBadgesRow(for: retryData)
+                }
+            }
+        }
+        .padding(.vertical)
+    }
+    
+    private var quickInfoGrid: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
+            QuickInfoCard(
+                icon: "clock.fill",
+                title: "Durasi",
+                value: "\(paket.duration)",
+                subtitle: "menit",
+                color: .blue
+            )
+            
+            QuickInfoCard(
+                icon: "questionmark.circle.fill",
+                title: "Soal",
+                value: "\(paket.totalQuestions ?? 50)",
+                subtitle: "pertanyaan",
+                color: .green
+            )
+            
+            QuickInfoCard(
+                icon: "arrow.clockwise",
+                title: "Kesempatan",
+                value: "1x",
+                subtitle: "percobaan",
+                color: .orange
+            )
+        }
+    }
+    
+    private var procedureCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Header
             HStack {
-              Image(systemName: retryData.has_passed ? "checkmark.circle.fill" : "xmark.circle.fill")
-                .foregroundColor(retryData.has_passed ? .green : .red)
-              
-              Text(retryData.has_passed ? "LULUS" : "BELUM LULUS")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundColor(retryData.has_passed ? .green : .red)
+                Image(systemName: "list.clipboard.fill")
+                    .font(.title2)
+                    .foregroundColor(.main)
+                
+                Text("Aturan & Prosedur")
+                    .font(.headline)
+                    .fontWeight(.bold)
             }
             
-            // Info
-            Text("Try out telah selesai dikerjakan")
-              .font(.caption)
-              .foregroundColor(.secondary)
-            
-            // View details button
-            Button(action: { showResultDetail = true }) {
-              Text("Lihat Detail")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundColor(.main)
+            // Rules list
+            VStack(alignment: .leading, spacing: 12) {
+                ProcedureRow(
+                    icon: "wifi",
+                    text: "Pastikan koneksi internet stabil",
+                    iconColor: .blue
+                )
+                
+                ProcedureRow(
+                    icon: "play.circle.fill",
+                    text: "Timer dimulai otomatis dan tidak dapat dijeda",
+                    iconColor: .orange
+                )
+                
+                ProcedureRow(
+                    icon: "checkmark.shield.fill",
+                    text: "Jawaban tersimpan otomatis setiap kali dipilih",
+                    iconColor: .green
+                )
+                
+                ProcedureRow(
+                    icon: "exclamationmark.triangle.fill",
+                    text: "Mode fullscreen - tidak dapat keluar hingga selesai",
+                    iconColor: .red
+                )
             }
-          }
-          
-          Spacer()
         }
-      }
+        .padding(20)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
     }
-    .padding(20)
-    .background(Color(.systemBackground))
-    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
-  }
-  
-  @ViewBuilder
-  private func statusBadgesRow(for data: RetryEligibilityData) -> some View {
-    HStack(spacing: 8) {
-      StatusBadge(
-        icon: "1.circle.fill",
-        text: "Sekali Coba",
-        color: .orange
-      )
-      
-      if data.total_attempts > 0 {
-        StatusBadge(
-          icon: data.has_passed ? "checkmark.circle.fill" : "clock.fill",
-          text: data.has_passed ? "Lulus" : "Selesai",
-          color: data.has_passed ? .green : .gray
-        )
-      }
-    }
-  }
-  
-  @ViewBuilder
-  private var actionSection: some View {
-    switch actionState {
-    case .loading:
-      VStack {
-        ProgressView()
-          .scaleEffect(1.2)
-        Text("Memuat status...")
-          .font(.subheadline)
-          .foregroundColor(.secondary)
-          .padding(.top, 8)
-      }
-      .frame(maxWidth: .infinity)
-      .padding(.vertical, 20)
-      
-    case .canStart:
-      VStack(spacing: 16) {
-        // Warning
-        WarningCard(
-          icon: "exclamationmark.triangle.fill",
-          message: "Try out hanya dapat dilakukan sekali. Pastikan Anda siap!",
-          color: .orange
-        )
-        
-        // Action button
-        ActionButton(
-          title: "Mulai Try Out",
-          subtitle: "Siap untuk memulai?",
-          icon: "play.fill",
-          color: .main,
-          isLoading: viewModel.isLoading
-        ) {
-          showRetryConfirmation = true
-        }
-      }
-      
-    case .showResult:
-      VStack(spacing: 16) {
-        if let retryData = retryData {
-          SuccessCard(
-            icon: retryData.has_passed ? "checkmark.circle.fill" : "clock.fill",
-            title: "Try Out Selesai",
-            message: retryData.has_passed ? "Selamat! Anda telah lulus." : "Try out telah diselesaikan.",
-            color: retryData.has_passed ? .green : .blue
-          )
-          
-          ActionButton(
-            title: "Lihat Hasil Detail",
-            subtitle: "Skor: \(retryData.best_score ?? 0)",
-            icon: "chart.bar.fill",
-            color: .blue,
-            isLoading: false
-          ) {
-            showResultDetail = true
-          }
-        }
-      }
-      
-    case .maxAttemptsReached(let bestScore):
-      VStack(spacing: 16) {
-        SuccessCard(
-          icon: "checkmark.circle.fill",
-          title: "Try Out Selesai",
-          message: "Skor terbaik: \(bestScore)",
-          color: .green
-        )
-      }
-      
-    case .waitingRetry:
-      VStack(spacing: 16) {
-        InfoCard(
-          icon: "info.circle.fill",
-          title: "Try Out Selesai",
-          message: "Try out hanya dapat dilakukan sekali",
-          color: .blue
-        )
-      }
-      
-    case .error(let message):
-      VStack(spacing: 16) {
-        ErrorCard(message: message)
-        
-        ActionButton(
-          title: "Coba Lagi",
-          subtitle: "Muat ulang status",
-          icon: "arrow.clockwise",
-          color: .main,
-          isLoading: false
-        ) {
-          Task { await checkRetryEligibility() }
-        }
-      }
-    }
-  }
-  
-  // MARK: - Helper Methods
-  
-  private func createLastAttemptInfo() -> LastAttemptInfo? {
-    guard let retryData = retryData, retryData.total_attempts > 0 else { return nil }
     
-    return LastAttemptInfo(
-      id: retryData.attempt_number,
-      score: retryData.best_score ?? 0,
-      passed: retryData.has_passed,
-      finished_at: "2024-01-01T00:00:00Z",
-      status: "finished"
-    )
-  }
-  
-  // MARK: - API Methods
-  private func checkRetryEligibility() async {
-    actionState = .loading
+    private var resultsCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Header
+            HStack {
+                Image(systemName: "chart.line.uptrend.xyaxis.circle.fill")
+                    .font(.title2)
+                    .foregroundColor(.main)
+                
+                Text("Hasil Anda")
+                    .font(.headline)
+                    .fontWeight(.bold)
+            }
+            
+            if let retryData = retryData {
+                HStack(spacing: 20) {
+                    // Score display
+                    VStack {
+                        ZStack {
+                            Circle()
+                                .stroke(Color(.systemGray5), lineWidth: 8)
+                                .frame(width: 80, height: 80)
+                            
+                            Circle()
+                                .trim(from: 0, to: CGFloat(retryData.best_score ?? 0) / 100)
+                                .stroke(
+                                    retryData.has_passed ? Color.green : Color.red,
+                                    style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                                )
+                                .frame(width: 80, height: 80)
+                                .rotationEffect(.degrees(-90))
+                            
+                            Text("\(retryData.best_score ?? 0)")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                        }
+                        
+                        Text("Skor")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        // Status
+                        HStack {
+                            Image(systemName: retryData.has_passed ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                .foregroundColor(retryData.has_passed ? .green : .red)
+                            
+                            Text(retryData.has_passed ? "LULUS" : "BELUM LULUS")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(retryData.has_passed ? .green : .red)
+                        }
+                        
+                        // Info
+                        Text("Try out telah selesai dikerjakan")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        // View details button
+                        Button(action: { showResultDetail = true }) {
+                            Text("Lihat Detail")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.main)
+                        }
+                    }
+                    
+                    Spacer()
+                }
+            }
+        }
+        .padding(20)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+    }
     
-    do {
-      let response: RetryEligibilityResponse = try await APIService.shared.performRequest(
-        endpoint: .checkRetryEligibility(orderId: orderId, paketId: paket.id),
-        method: .GET,
-        responseType: RetryEligibilityResponse.self
-      )
-      
-      if response.success, let data = response.data {
-        retryData = data
+    @ViewBuilder
+    private func statusBadgesRow(for data: RetryEligibilityData) -> some View {
+        HStack(spacing: 8) {
+            StatusBadge(
+                icon: "1.circle.fill",
+                text: "Sekali Coba",
+                color: .orange
+            )
+            
+            if data.total_attempts > 0 {
+                StatusBadge(
+                    icon: data.has_passed ? "checkmark.circle.fill" : "clock.fill",
+                    text: data.has_passed ? "Lulus" : "Selesai",
+                    color: data.has_passed ? .green : .gray
+                )
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var actionSection: some View {
+        switch actionState {
+        case .loading:
+            VStack(spacing: 8) { // Reduced spacing for compact loading
+                ProgressView()
+                    .scaleEffect(1.2)
+                Text("Memuat status...")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16) // Reduced padding
+            
+        case .canStart:
+            VStack(spacing: 12) { // Reduced spacing
+                // Compact Warning
+                HStack(spacing: 8) { // Horizontal layout for compact warning
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.callout)
+                        .foregroundColor(.orange)
+                    
+                    Text("Try out hanya dapat dilakukan sekali. Pastikan Anda siap!")
+                        .font(.caption)
+                        .foregroundColor(.primary)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(12) // Reduced padding
+                .background(Color.orange.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                
+                // Action button
+                ActionButton(
+                    title: "Mulai Try Out",
+                    subtitle: "Siap untuk memulai?",
+                    icon: "play.fill",
+                    color: .main,
+                    isLoading: viewModel.isLoading
+                ) {
+                    showRetryConfirmation = true
+                }
+            }
+            
+        case .showResult:
+            VStack(spacing: 12) {
+                if let retryData = retryData {
+                    // Compact success card
+                    HStack(spacing: 12) {
+                        Image(systemName: retryData.has_passed ? "checkmark.circle.fill" : "clock.fill")
+                            .font(.title2)
+                            .foregroundColor(retryData.has_passed ? .green : .blue)
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Try Out Selesai")
+                                .font(.headline)
+                                .fontWeight(.bold)
+                            
+                            Text(retryData.has_passed ? "Selamat! Anda telah lulus." : "Try out telah diselesaikan.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Spacer()
+                    }
+                    .padding(16)
+                    .background((retryData.has_passed ? Color.green : Color.blue).opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    
+                    ActionButton(
+                        title: "Lihat Hasil Detail",
+                        subtitle: "Skor: \(retryData.best_score ?? 0)",
+                        icon: "chart.bar.fill",
+                        color: .blue,
+                        isLoading: false
+                    ) {
+                        showResultDetail = true
+                    }
+                }
+            }
+            
+        case .maxAttemptsReached(let bestScore):
+            VStack(spacing: 12) {
+                HStack(spacing: 12) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.green)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Try Out Selesai")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                        
+                        Text("Skor terbaik: \(bestScore)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                }
+                .padding(16)
+                .background(Color.green.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            
+        case .waitingRetry:
+            VStack(spacing: 12) {
+                HStack(spacing: 12) {
+                    Image(systemName: "info.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.blue)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Try Out Selesai")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                        
+                        Text("Try out hanya dapat dilakukan sekali")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                }
+                .padding(16)
+                .background(Color.blue.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            
+        case .error(let message):
+            VStack(spacing: 12) {
+                HStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.title2)
+                        .foregroundColor(.red)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Terjadi Kesalahan")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                        
+                        Text(message)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(2)
+                    }
+                    
+                    Spacer()
+                }
+                .padding(16)
+                .background(Color.red.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                
+                ActionButton(
+                    title: "Coba Lagi",
+                    subtitle: "Muat ulang status",
+                    icon: "arrow.clockwise",
+                    color: .main,
+                    isLoading: false
+                ) {
+                    Task { await checkRetryEligibility() }
+                }
+            }
+        }
+    }
+    
+    // ... rest of the existing code remains the same ...
+    
+    // MARK: - Helper Methods
+    
+    private func createLastAttemptInfo() -> LastAttemptInfo? {
+        guard let retryData = retryData, retryData.total_attempts > 0 else { return nil }
         
-        // If the user has completed tries, get the actual try-out ID
-        if data.total_attempts > 0 {
-          await fetchActualTryOutId()
-        }
+        return LastAttemptInfo(
+            id: retryData.attempt_number,
+            score: retryData.best_score ?? 0,
+            passed: retryData.has_passed,
+            finished_at: "2024-01-01T00:00:00Z",
+            status: "finished"
+        )
+    }
+    
+    // MARK: - API Methods
+    private func checkRetryEligibility() async {
+        actionState = .loading
         
-        await MainActor.run {
-          updateActionState(with: data)
+        do {
+            let response: RetryEligibilityResponse = try await APIService.shared.performRequest(
+                endpoint: .checkRetryEligibility(orderId: orderId, paketId: paket.id),
+                method: .GET,
+                responseType: RetryEligibilityResponse.self
+            )
+            
+            if response.success, let data = response.data {
+                retryData = data
+                
+                // If the user has completed tries, get the actual try-out ID
+                if data.total_attempts > 0 {
+                    await fetchActualTryOutId()
+                }
+                
+                await MainActor.run {
+                    updateActionState(with: data)
+                }
+            } else {
+                actionState = .error(response.error ?? response.message)
+            }
+        } catch {
+            actionState = .error("Gagal mengecek status: \(error.localizedDescription)")
         }
-      } else {
-        actionState = .error(response.error ?? response.message)
-      }
-    } catch {
-      actionState = .error("Gagal mengecek status: \(error.localizedDescription)")
     }
-  }
-  
-  private func fetchActualTryOutId() async {
-    do {
-      let response: TryOutHistoryResponse = try await APIService.shared.performRequest(
-        endpoint: .getTryOutHistory(page: 1, limit: 10),
-        method: .GET,
-        responseType: TryOutHistoryResponse.self
-      )
-      
-      if response.success {
-        // Find the try-out for this paket that is completed
-        let completedTryOut = response.data.data.first { historyItem in
-          historyItem.paket_id == paket.id && historyItem.finished_at != nil
+    
+    private func fetchActualTryOutId() async {
+        do {
+            let response: TryOutHistoryResponse = try await APIService.shared.performRequest(
+                endpoint: .getTryOutHistory(page: 1, limit: 10),
+                method: .GET,
+                responseType: TryOutHistoryResponse.self
+            )
+            
+            if response.success {
+                // Find the try-out for this paket that is completed
+                let completedTryOut = response.data.data.first { historyItem in
+                    historyItem.paket_id == paket.id && historyItem.finished_at != nil
+                }
+                
+                if let tryOut = completedTryOut {
+                    actualTryOutId = tryOut.id
+                    print("✅ Found actual try-out ID: \(tryOut.id) for paket: \(paket.id)")
+                }
+            }
+        } catch {
+            print("❌ Failed to fetch try-out history: \(error)")
         }
-        
-        if let tryOut = completedTryOut {
-          actualTryOutId = tryOut.id
-          print("✅ Found actual try-out ID: \(tryOut.id) for paket: \(paket.id)")
+    }
+    
+    private func updateActionState(with data: RetryEligibilityData) {
+        if data.total_attempts == 0 {
+            actionState = .canStart
+        } else {
+            let syntheticAttempt = LastAttemptInfo(
+                id: data.attempt_number,
+                score: data.best_score ?? 0,
+                passed: data.has_passed,
+                finished_at: "2024-01-01T00:00:00Z",
+                status: "finished"
+            )
+            actionState = .showResult(syntheticAttempt)
         }
-      }
-    } catch {
-      print("❌ Failed to fetch try-out history: \(error)")
     }
-  }
-  
-  private func updateActionState(with data: RetryEligibilityData) {
-    if data.total_attempts == 0 {
-      actionState = .canStart
-    } else {
-      let syntheticAttempt = LastAttemptInfo(
-        id: data.attempt_number,
-        score: data.best_score ?? 0,
-        passed: data.has_passed,
-        finished_at: "2024-01-01T00:00:00Z",
-        status: "finished"
-      )
-      actionState = .showResult(syntheticAttempt)
+    
+    private func startTryOut() async {
+        let success = await viewModel.startTryOut(orderId: orderId, paketId: paket.id)
+        if success, let sessionId = viewModel.tryOutSession?.id {
+            dismiss()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                tryOutCoordinator.startTryOut(tryOutId: sessionId)
+            }
+        } else {
+            if let error = viewModel.errorMessage {
+                actionState = .error(error)
+            }
+        }
     }
-  }
-  
-  private func startTryOut() async {
-    let success = await viewModel.startTryOut(orderId: orderId, paketId: paket.id)
-    if success, let sessionId = viewModel.tryOutSession?.id {
-      dismiss()
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-        tryOutCoordinator.startTryOut(tryOutId: sessionId)
-      }
-    } else {
-      if let error = viewModel.errorMessage {
-        actionState = .error(error)
-      }
+    
+    private func formatDate(_ dateString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        if let date = formatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateStyle = .medium
+            displayFormatter.timeStyle = .short
+            return displayFormatter.string(from: date)
+        }
+        return dateString
     }
-  }
-  
-  private func formatDate(_ dateString: String) -> String {
-    let formatter = ISO8601DateFormatter()
-    if let date = formatter.date(from: dateString) {
-      let displayFormatter = DateFormatter()
-      displayFormatter.dateStyle = .medium
-      displayFormatter.timeStyle = .short
-      return displayFormatter.string(from: date)
-    }
-    return dateString
-  }
 }
 
 // MARK: - Reusable Components (Only UI Components, no type definitions)
