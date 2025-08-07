@@ -9,6 +9,7 @@ import SwiftUI
 
 struct TryOutHistoryView: View {
     @StateObject private var viewModel = TryOutHistoryViewModel()
+    @EnvironmentObject private var tryOutCoordinator: TryOutCoordinator // Add this
     
     var body: some View {
         List {
@@ -42,9 +43,14 @@ struct TryOutHistoryView: View {
     @ViewBuilder
     private func historyRowView(for item: TryOutHistoryItem) -> some View {
         if item.finished_at != nil {
-            NavigationLink(destination: PembahasanView(tryOutId: item.id)) {
+            // Use coordinator instead of NavigationLink
+            Button(action: {
+                print("📚 Opening pembahasan for try out ID: \(item.id)")
+                tryOutCoordinator.showPembahasan(tryOutId: item.id)
+            }) {
                 TryOutHistoryRow(item: item)
             }
+            .buttonStyle(PlainButtonStyle())
             .onAppear {
                 loadMoreIfNeeded(for: item)
             }
@@ -154,5 +160,6 @@ struct TryOutHistoryRow: View {
 #Preview {
     NavigationStack {
         TryOutHistoryView()
+            .environmentObject(TryOutCoordinator())
     }
 }

@@ -2,17 +2,25 @@
 //  TryOutCoordinator.swift
 //  appskep
 //
-//  Created by irfan wahendra on 02/08/25.
+//  Created by irfan wahendra on 19/07/25.
 //
 
-import Foundation
 import SwiftUI
+import Combine
 
+@MainActor
 class TryOutCoordinator: ObservableObject {
+    // Try Out states
     @Published var isShowingTryOut = false
-    @Published var isShowingResult = false
     @Published var currentTryOutId: Int?
+    
+    // Result states
+    @Published var isShowingResult = false
     @Published var tryOutResult: TryOutResult?
+    
+    // Pembahasan states - Add these
+    @Published var isShowingPembahasan = false
+    @Published var currentPembahasanTryOutId: Int?
     
     func startTryOut(tryOutId: Int) {
         print("🚀 TryOutCoordinator: Starting try out with ID: \(tryOutId)")
@@ -21,29 +29,30 @@ class TryOutCoordinator: ObservableObject {
     }
     
     func showResult(_ result: TryOutResult) {
-        print("📊 TryOutCoordinator: Showing result with score: \(result.score)")
-        print("📊 TryOutCoordinator: isShowingTryOut before: \(isShowingTryOut)")
-        print("📊 TryOutCoordinator: isShowingResult before: \(isShowingResult)")
-        
+        print("📊 TryOutCoordinator: Showing result for try out ID: \(result.id)")
         tryOutResult = result
+        isShowingTryOut = false
         isShowingResult = true
-        isShowingTryOut = false // Close try out, show result
-        
-        print("📊 TryOutCoordinator: isShowingTryOut after: \(isShowingTryOut)")
-        print("📊 TryOutCoordinator: isShowingResult after: \(isShowingResult)")
     }
     
     func backToHome() {
         print("🏠 TryOutCoordinator: Going back to home")
-        print("🏠 TryOutCoordinator: isShowingTryOut before: \(isShowingTryOut)")
-        print("🏠 TryOutCoordinator: isShowingResult before: \(isShowingResult)")
-        
         isShowingResult = false
         isShowingTryOut = false
-        currentTryOutId = nil
         tryOutResult = nil
-        
-        print("🏠 TryOutCoordinator: isShowingTryOut after: \(isShowingTryOut)")
-        print("🏠 TryOutCoordinator: isShowingResult after: \(isShowingResult)")
+        currentTryOutId = nil
+    }
+    
+    // Add pembahasan methods
+    func showPembahasan(tryOutId: Int) {
+        print("📚 TryOutCoordinator: Showing pembahasan for try out ID: \(tryOutId)")
+        currentPembahasanTryOutId = tryOutId
+        isShowingPembahasan = true
+    }
+    
+    func closePembahasan() {
+        print("📚 TryOutCoordinator: Closing pembahasan")
+        isShowingPembahasan = false
+        currentPembahasanTryOutId = nil
     }
 }

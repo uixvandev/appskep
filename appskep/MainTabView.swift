@@ -68,6 +68,15 @@ struct MainTabView: View {
                     .environmentObject(tryOutCoordinator)
             }
         }
+        // Pembahasan Modal - Add this
+        .fullScreenCover(isPresented: $tryOutCoordinator.isShowingPembahasan) {
+            if let tryOutId = tryOutCoordinator.currentPembahasanTryOutId {
+                NavigationStack {
+                    PembahasanView(tryOutId: tryOutId)
+                        .environmentObject(tryOutCoordinator)
+                }
+            }
+        }
         // Auto switch to home tab when returning from try out
         .onChange(of: tryOutCoordinator.isShowingResult) { _, isShowing in
             if !isShowing && !tryOutCoordinator.isShowingTryOut {
@@ -78,6 +87,13 @@ struct MainTabView: View {
         .onChange(of: tryOutCoordinator.isShowingTryOut) { _, isShowing in
             if !isShowing && !tryOutCoordinator.isShowingResult {
                 print("🏠 Auto-switching to home tab")
+                selectedIndex = 0
+            }
+        }
+        // Auto switch to home tab when returning from pembahasan - Add this
+        .onChange(of: tryOutCoordinator.isShowingPembahasan) { _, isShowing in
+            if !isShowing {
+                print("🏠 Auto-switching to home tab from pembahasan")
                 selectedIndex = 0
             }
         }

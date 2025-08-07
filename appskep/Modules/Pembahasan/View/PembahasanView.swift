@@ -11,278 +11,407 @@ struct PembahasanView: View {
   let tryOutId: Int
   @StateObject private var viewModel = PembahasanViewModel()
   @Environment(\.dismiss) private var dismiss
+  @EnvironmentObject private var tryOutCoordinator: TryOutCoordinator
   @State private var showOverview = false
   @State private var showChatBot = false
   
   var body: some View {
-    VStack {
-      if viewModel.isLoading {
-        VStack {
-          ProgressView()
-          Text("Memuat pembahasan...")
-            .padding(.top, 8)
-            .foregroundColor(.secondary)
-        }
-      } else if let question = viewModel.currentQuestion {
+      ZStack {
+        // Background color
+        Color(.systemGray6)
+          .ignoresSafeArea(.all)
+        
         VStack(spacing: 0) {
-          headerView
-          
-          ScrollView {
-            pembahasanQuestionView(question: question)
-              .padding()
-          }
-          
-          navigationButtons(question: question) // Pass question as parameter
-        }
-      } else if let errorMessage = viewModel.errorMessage {
-        VStack(spacing: 16) {
-          Image(systemName: "exclamationmark.triangle")
-            .font(.largeTitle)
-            .foregroundColor(.orange)
-          
-          Text("Gagal memuat pembahasan")
-            .font(.headline)
-          
-          Text(errorMessage)
-            .font(.body)
-            .multilineTextAlignment(.center)
-            .foregroundColor(.secondary)
-          
-          Button("Coba Lagi") {
-            Task {
-              await viewModel.fetchPembahasan(tryOutId: tryOutId)
+          if viewModel.isLoading {
+            // Loading state - centered
+            VStack(spacing: 16) {
+              ProgressView()
+                .scaleEffect(1.2)
+              Text("Memuat pembahasan...")
+                .font(.headline)
+                .foregroundColor(.secondary)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            
+          } else if let question = viewModel.currentQuestion {
+            // Header (fixed at top)
+            headerView
+            
+            // Content (scrollable)
+            ScrollView {
+              VStack(spacing: 20) {
+                pembahasanQuestionView(question: question)
+                
+                // Bottom spacing for navigation buttons
+                Rectangle()
+                  .fill(Color.clear)
+                  .frame(height: 100)
+              }
+              .padding(.top, 16)
+            }
+            
+            // Navigation buttons (fixed at bottom)
+            navigationButtons(question: question)
+            
+          } else if let errorMessage = viewModel.errorMessage {
+            // Error state - centered
+            VStack(spacing: 20) {
+              Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 60))
+                .foregroundColor(.orange)
+              
+              Text("Gagal memuat pembahasan")
+                .font(.title2)
+                .fontWeight(.bold)
+              
+              Text(errorMessage)
+                .font(.body)
+                .multilineTextAlignment(.center)
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 32)
+              
+              Button("Coba Lagi") {
+                Task {
+                  await viewModel.fetchPembahasan(tryOutId: tryOutId)
+                }
+              }
+              .font(.headline)
+              .foregroundColor(.white)
+              .frame(width: 140, height: 44)
+              .background(Color.blue)
+              .cornerRadius(12)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
           }
-          .padding()
-          .background(Color.main)
-          .foregroundColor(.white)
-          .cornerRadius(8)
         }
-        .padding()
       }
-    }
-    .navigationBarHidden(true)
-    .navigationBarBackButtonHidden(true)
-    .onAppear {
-      Task {
-        await viewModel.fetchPembahasan(tryOutId: tryOutId)
+      .ignoresSafeArea(.all)
+      .navigationBarHidden(true)
+      .navigationBarBackButtonHidden(true)
+      .onAppear {
+        Task {
+          await viewModel.fetchPembahasan(tryOutId: tryOutId)
+        }
       }
-    }
-    .sheet(isPresented: $showOverview) {
-      if let questions = viewModel.pembahasanData?.questions {
-        PembahasanOverviewSheet(
-          questions: questions,
-          currentQuestionIndex: $viewModel.currentQuestionIndex
-        )
+      .sheet(isPresented: $showOverview) {
+        if let questions = viewModel.pembahasanData?.questions {
+          PembahasanOverviewSheet(
+            questions: questions,
+            currentQuestionIndex: $viewModel.currentQuestionIndex
+          )
+        }
       }
-    }
-    .fullScreenCover(isPresented: $showChatBot) {
-      // Fix: Use viewModel.currentQuestion instead of question
-      if let currentQuestion = viewModel.currentQuestion {
-        NavigationStack {
-          ChatBotView(question: currentQuestion)
+      .fullScreenCover(isPresented: $showChatBot) {
+        if let currentQuestion = viewModel.currentQuestion {
+          NavigationStack {
+            ChatBotView(question: currentQuestion)
+          }
         }
       }
     }
-  }
   
+  // MARK: - UI Components
   private var headerView: some View {
-    VStack(spacing: 12) {
-      // Status bar area padding
-      Rectangle()
-        .fill(Color.clear)
-        .frame(height: getSafeAreaTop())
-      
-      HStack {
-        Button(action: { dismiss() }) {
-          Image(systemName: "chevron.left")
-            .font(.title2)
-            .foregroundColor(.main)
-        }
+      VStack(spacing: 0) {
+        // Status bar area padding
+        Rectangle()
+          .fill(Color(.systemBackground))
+          .frame(height: getSafeAreaTop())
         
-        VStack(alignment: .leading, spacing: 4) {
-          Text("Pembahasan Try Out")
-            .font(.headline)
-            .lineLimit(1)
+        // Header content
+        HStack(spacing: 16) {
+          Button(action: {
+            // Use coordinator to close instead of dismiss
+            tryOutCoordinator.closePembahasan()
+          }) {
+            Image(systemName: "chevron.left")
+              .font(.title2)
+              .foregroundColor(.primary)
+          }
           
-          if let resultsData = viewModel.resultsData {
-            Text("\(resultsData.paket_name)")
-              .font(.caption)
-              .foregroundColor(.secondary)
-              .lineLimit(1)
-          }
-        }
-        
-        Spacer()
-        
-        Button(action: {
-          showOverview = true
-        }) {
-          Image(systemName: "square.grid.2x2.fill")
-            .font(.title2)
-            .foregroundColor(.main)
-        }
-      }
-      .padding(.horizontal)
-      
-      // Progress info
-      VStack(spacing: 8) {
-        HStack {
-          Text(viewModel.progressText)
-            .font(.caption)
-            .foregroundColor(.secondary)
-          Spacer()
-          if let resultsData = viewModel.resultsData {
-            Text("Skor: \(resultsData.score)")
-              .font(.caption)
+          VStack(alignment: .leading, spacing: 2) {
+            Text("Try Out Part 1")
+              .font(.headline)
               .fontWeight(.semibold)
-              .foregroundColor(.main)
+              .lineLimit(1)
+            
+            Text(viewModel.progressText)
+              .font(.subheadline)
+              .foregroundColor(.secondary)
+          }
+          
+          Spacer()
+          
+          Button(action: {
+            showOverview = true
+          }) {
+            Image(systemName: "square.grid.2x2")
+              .font(.title2)
+              .foregroundColor(.blue)
           }
         }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .background(Color(.systemBackground))
       }
-      .padding(.horizontal)
-      
-      Divider()
     }
-    .background(Color(.systemBackground))
-  }
   
   private func pembahasanQuestionView(question: PembahasanQuestion) -> some View {
-    VStack(alignment: .leading, spacing: 20) {
-      // Question
-      Text(question.question)
-        .font(.body)
-        .lineSpacing(5)
-      
-      // Options with user's answer and correct answer indication
-      ForEach(Array(question.all_options.enumerated()), id: \.element.id) { index, option in
-        let optionChar = Character(UnicodeScalar(65 + index)!)
-        PembahasanOptionView(
-          option: option,
-          index: optionChar,
-          isUserAnswer: option.id == question.user_answer.pilihan_jawaban_id,
-          isCorrectAnswer: option.is_correct
-        )
-      }
-      
-      // Result indicator
-      HStack {
-        Image(systemName: question.is_user_correct ? "checkmark.circle.fill" : "xmark.circle.fill")
-          .foregroundColor(question.is_user_correct ? .green : .red)
-        
-        Text(question.is_user_correct ? "Jawaban Anda Benar!" : "Jawaban Anda Salah")
-          .font(.headline)
-          .foregroundColor(question.is_user_correct ? .green : .red)
-        
-        Spacer()
-      }
-      .padding()
-      .background(question.is_user_correct ? Color.green.opacity(0.1) : Color.red.opacity(0.1))
-      .cornerRadius(12)
-      
-      // Explanation
-      VStack(alignment: .leading, spacing: 8) {
-        Text("Pembahasan:")
-          .font(.headline)
-          .foregroundColor(.main)
-        
-        Text(question.explanation)
+      VStack(alignment: .leading, spacing: 24) {
+        // Question text
+        Text(question.question)
           .font(.body)
-          .lineSpacing(4)
+          .lineSpacing(6)
+          .fixedSize(horizontal: false, vertical: true)
+        
+        // Answer options
+        VStack(spacing: 16) {
+          ForEach(Array(question.all_options.enumerated()), id: \.element.id) { index, option in
+            let optionChar = Character(UnicodeScalar(65 + index)!)
+            AnswerOptionCard(
+              option: option,
+              index: optionChar,
+              isUserAnswer: option.id == question.user_answer.pilihan_jawaban_id,
+              isCorrectAnswer: option.is_correct
+            )
+          }
+        }
+        
+        // User's answer status
+        UserAnswerStatusCard(
+          isCorrect: question.is_user_correct,
+          userAnswerText: question.user_answer.option_text
+        )
+        
+        // Explanation section
+        ExplanationCard(explanation: question.explanation)
       }
-      .padding()
-      .background(Color(.systemGray6))
-      .cornerRadius(12)
-      
-      // Bottom padding
-      Rectangle()
-        .fill(Color.clear)
-        .frame(height: 100)
+      .padding(.horizontal, 20)
     }
-  }
   
   private func navigationButtons(question: PembahasanQuestion) -> some View {
-    VStack(spacing: 0) {
-      Divider()
-      
-      // Chat Bot Button
-      Button(action: {
-        showChatBot = true
-      }) {
-        HStack {
-          Image(systemName: "bubble.left.and.bubble.right.fill")
-            .font(.title3)
-          Text("Tanya Askep")
-            .fontWeight(.semibold)
-        }
-        .foregroundColor(.white)
-        .frame(maxWidth: .infinity)
-        .frame(height: 44)
-        .background(
-          LinearGradient(
-            colors: [Color.blue, Color.purple],
-            startPoint: .leading,
-            endPoint: .trailing
-          )
-        )
-        .cornerRadius(12)
-      }
-      .padding(.horizontal)
-      .padding(.top, 8)
-      
-      // Navigation Buttons
-      HStack {
+      VStack(spacing: 0) {
+        // Chat Bot Button
         Button(action: {
-          viewModel.goToPreviousQuestion()
+          showChatBot = true
         }) {
-          Text("‹ Sebelumnya")
-            .padding()
-            .frame(maxWidth: .infinity)
-            .background(viewModel.canGoToPrevious ? Color.main.opacity(0.1) : Color(.systemGray5))
-            .foregroundColor(viewModel.canGoToPrevious ? .main : .secondary)
-            .cornerRadius(12)
-        }
-        .disabled(!viewModel.canGoToPrevious)
-        
-        Button(action: {
-          if viewModel.isLastQuestion {
-            dismiss()
-          } else {
-            viewModel.goToNextQuestion()
+          HStack(spacing: 12) {
+            ZStack {
+              RoundedRectangle(cornerRadius: 8)
+                .fill(LinearGradient(
+                  colors: [Color.blue, Color.cyan],
+                  startPoint: .leading,
+                  endPoint: .trailing
+                ))
+                .frame(width: 32, height: 32)
+              
+              Image(systemName: "sparkles")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundColor(.white)
+            }
+            
+            Text("Tanya chatbot")
+              .font(.headline)
+              .fontWeight(.medium)
+              .foregroundColor(.white)
           }
-        }) {
-          Text(viewModel.isLastQuestion ? "Selesai" : "Selanjutnya ›")
-            .padding()
-            .frame(maxWidth: .infinity)
-            .background(Color.main)
-            .foregroundColor(.white)
-            .cornerRadius(12)
+          .frame(maxWidth: .infinity)
+          .frame(height: 56)
+          .background(
+            LinearGradient(
+              colors: [Color.blue, Color.cyan],
+              startPoint: .leading,
+              endPoint: .trailing
+            )
+          )
+          .cornerRadius(16)
         }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 16)
+        
+        // Navigation Buttons
+        HStack(spacing: 16) {
+          Button(action: {
+            viewModel.goToPreviousQuestion()
+          }) {
+            Image(systemName: "chevron.left")
+              .font(.system(size: 18, weight: .semibold))
+              .foregroundColor(viewModel.canGoToPrevious ? .primary : .secondary)
+              .frame(width: 50, height: 50)
+              .background(Color(.systemBackground))
+              .clipShape(Circle())
+              .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+          }
+          .disabled(!viewModel.canGoToPrevious)
+          
+          Spacer()
+          
+          Button(action: {
+            if viewModel.isLastQuestion {
+              // Use coordinator to close instead of dismiss
+              tryOutCoordinator.closePembahasan()
+            } else {
+              viewModel.goToNextQuestion()
+            }
+          }) {
+            Image(systemName: "chevron.right")
+              .font(.system(size: 18, weight: .semibold))
+              .foregroundColor(.primary)
+              .frame(width: 50, height: 50)
+              .background(Color(.systemBackground))
+              .clipShape(Circle())
+              .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+          }
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, getSafeAreaBottom() + 16)
+        .background(Color(.systemGray6))
       }
-      .padding()
-      
-      // Bottom safe area padding
-      Rectangle()
-        .fill(Color(.systemBackground))
-        .frame(height: getSafeAreaBottom())
     }
-    .background(Color(.systemBackground))
-  }
+  
+  // MARK: - Helper Functions
   
   private func getSafeAreaTop() -> CGFloat {
-    guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-          let window = windowScene.windows.first else {
-      return 44
+      guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+            let window = windowScene.windows.first else {
+        return 44
+      }
+      return window.safeAreaInsets.top
     }
-    return window.safeAreaInsets.top
-  }
   
   private func getSafeAreaBottom() -> CGFloat {
-    guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-          let window = windowScene.windows.first else {
-      return 34
+      guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+            let window = windowScene.windows.first else {
+        return 34
+      }
+      return window.safeAreaInsets.bottom
     }
-    return window.safeAreaInsets.bottom
+}
+
+// MARK: - Supporting Views
+
+struct AnswerOptionCard: View {
+  let option: PembahasanOption
+  let index: Character
+  let isUserAnswer: Bool
+  let isCorrectAnswer: Bool
+  
+  private var backgroundColor: Color {
+    if isCorrectAnswer {
+      return Color(.systemBackground)
+    } else if isUserAnswer && !isCorrectAnswer {
+      return Color(.systemBackground)
+    } else {
+      return Color(.systemBackground)
+    }
+  }
+  
+  private var borderColor: Color {
+    if isCorrectAnswer {
+      return Color.green
+    } else if isUserAnswer && !isCorrectAnswer {
+      return Color.red
+    } else {
+      return Color(.systemGray4)
+    }
+  }
+  
+  private var indexColor: Color {
+    if isCorrectAnswer {
+      return Color.green
+    } else if isUserAnswer && !isCorrectAnswer {
+      return Color.red
+    } else {
+      return Color.gray
+    }
+  }
+  
+  var body: some View {
+    HStack(spacing: 16) {
+      // Option index
+      Text(String(index))
+        .font(.headline)
+        .fontWeight(.bold)
+        .frame(width: 28, height: 28)
+        .background(indexColor)
+        .foregroundColor(.white)
+        .clipShape(Circle())
+      
+      // Option text
+      Text(option.option_text)
+        .font(.body)
+        .multilineTextAlignment(.leading)
+        .fixedSize(horizontal: false, vertical: true)
+      
+      Spacer()
+    }
+    .padding(16)
+    .background(backgroundColor)
+    .cornerRadius(16)
+    .overlay(
+      RoundedRectangle(cornerRadius: 16)
+        .stroke(borderColor, lineWidth: 2)
+    )
+  }
+}
+
+struct UserAnswerStatusCard: View {
+  let isCorrect: Bool
+  let userAnswerText: String
+  
+  var body: some View {
+    HStack(spacing: 12) {
+      ZStack {
+        RoundedRectangle(cornerRadius: 8)
+          .fill(isCorrect ? Color.green.opacity(0.2) : Color.red.opacity(0.2))
+          .frame(width: 32, height: 32)
+        
+        Image(systemName: isCorrect ? "checkmark" : "xmark")
+          .font(.system(size: 16, weight: .bold))
+          .foregroundColor(isCorrect ? .green : .red)
+      }
+      
+      VStack(alignment: .leading, spacing: 4) {
+        Text(isCorrect ? "Jawaban kamu benar" : "Jawaban kamu salah")
+          .font(.headline)
+          .fontWeight(.semibold)
+          .foregroundColor(isCorrect ? .green : .red)
+        
+        if !isCorrect {
+          Text("Jawaban kamu: \(userAnswerText)")
+            .font(.subheadline)
+            .foregroundColor(.secondary)
+        }
+      }
+      
+      Spacer()
+    }
+    .padding(16)
+    .background(isCorrect ? Color.green.opacity(0.1) : Color.red.opacity(0.1))
+    .cornerRadius(16)
+  }
+}
+
+struct ExplanationCard: View {
+  let explanation: String
+  
+  var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Text("Pembahasan")
+        .font(.headline)
+        .fontWeight(.semibold)
+        .foregroundColor(.primary)
+      
+      Text(explanation)
+        .font(.body)
+        .lineSpacing(6)
+        .fixedSize(horizontal: false, vertical: true)
+        .foregroundColor(.primary)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(20)
+    .background(Color(.systemGray5))
+    .cornerRadius(16)
   }
 }
 
