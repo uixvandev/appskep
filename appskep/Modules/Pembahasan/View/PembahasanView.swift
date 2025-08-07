@@ -189,26 +189,33 @@ struct PembahasanView: View {
       .padding(.horizontal, 20)
     }
   
+  //Navigation button
   private func navigationButtons(question: PembahasanQuestion) -> some View {
-      VStack(spacing: 0) {
-        // Chat Bot Button
+    VStack(spacing: 0) {
+      // Navigation Buttons - 3 buttons in HStack
+      HStack(spacing: 16) {
+        // Previous Button (Left Arrow)
+        Button(action: {
+          viewModel.goToPreviousQuestion()
+        }) {
+          Image(systemName: "chevron.left")
+            .font(.system(size: 18, weight: .semibold))
+            .foregroundColor(viewModel.canGoToPrevious ? .primary : .secondary)
+            .frame(width: 50, height: 50)
+            .background(Color(.systemBackground))
+            .clipShape(Circle())
+            .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+        }
+        .disabled(!viewModel.canGoToPrevious)
+        
+        // Chat Bot Button (Center)
         Button(action: {
           showChatBot = true
         }) {
           HStack(spacing: 12) {
-            ZStack {
-              RoundedRectangle(cornerRadius: 8)
-                .fill(LinearGradient(
-                  colors: [Color.blue, Color.cyan],
-                  startPoint: .leading,
-                  endPoint: .trailing
-                ))
-                .frame(width: 32, height: 32)
-              
               Image(systemName: "sparkles")
                 .font(.system(size: 14, weight: .bold))
                 .foregroundColor(.white)
-            }
             
             Text("Tanya chatbot")
               .font(.headline)
@@ -224,50 +231,32 @@ struct PembahasanView: View {
               endPoint: .trailing
             )
           )
-          .cornerRadius(16)
+          .cornerRadius(28) // Make it more rounded like in the image
         }
-        .padding(.horizontal, 20)
-        .padding(.bottom, 16)
         
-        // Navigation Buttons
-        HStack(spacing: 16) {
-          Button(action: {
-            viewModel.goToPreviousQuestion()
-          }) {
-            Image(systemName: "chevron.left")
-              .font(.system(size: 18, weight: .semibold))
-              .foregroundColor(viewModel.canGoToPrevious ? .primary : .secondary)
-              .frame(width: 50, height: 50)
-              .background(Color(.systemBackground))
-              .clipShape(Circle())
-              .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+        // Next Button (Right Arrow)
+        Button(action: {
+          if viewModel.isLastQuestion {
+            // Use coordinator to close instead of dismiss
+            tryOutCoordinator.closePembahasan()
+          } else {
+            viewModel.goToNextQuestion()
           }
-          .disabled(!viewModel.canGoToPrevious)
-          
-          Spacer()
-          
-          Button(action: {
-            if viewModel.isLastQuestion {
-              // Use coordinator to close instead of dismiss
-              tryOutCoordinator.closePembahasan()
-            } else {
-              viewModel.goToNextQuestion()
-            }
-          }) {
-            Image(systemName: "chevron.right")
-              .font(.system(size: 18, weight: .semibold))
-              .foregroundColor(.primary)
-              .frame(width: 50, height: 50)
-              .background(Color(.systemBackground))
-              .clipShape(Circle())
-              .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
-          }
+        }) {
+          Image(systemName: "chevron.right")
+            .font(.system(size: 18, weight: .semibold))
+            .foregroundColor(.primary)
+            .frame(width: 50, height: 50)
+            .background(Color(.systemBackground))
+            .clipShape(Circle())
+            .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
         }
-        .padding(.horizontal, 20)
-        .padding(.bottom, getSafeAreaBottom() + 16)
-        .background(Color(.systemGray6))
       }
+      .padding(.horizontal, 20)
+      .padding(.bottom, getSafeAreaBottom() + 16)
+      .background(Color(.systemGray6))
     }
+  }
   
   // MARK: - Helper Functions
   
