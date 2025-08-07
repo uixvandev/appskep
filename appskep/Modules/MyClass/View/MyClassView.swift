@@ -12,52 +12,68 @@ struct MyClassView: View {
   
   var body: some View {
     NavigationStack {
-      Group {
-        if viewModel.isLoading && viewModel.myPaidClasses.isEmpty {
-          LoadingView()
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if !viewModel.myPaidClasses.isEmpty {
-          List(viewModel.myPaidClasses) { order in
-            NavigationLink(destination: MyClassDetailView(order: order)) {
-              MyClassRowView(order: order)
-            }
-            .onAppear {
-              // Load more when reaching last item
-              if order.id == viewModel.myPaidClasses.last?.id {
-                Task {
-                  await viewModel.loadMoreClasses()
+      ZStack {
+        // Background
+        Color(.systemGray6)
+          .ignoresSafeArea()
+        
+        Group {
+          if viewModel.isLoading && viewModel.myPaidClasses.isEmpty {
+            LoadingView()
+              .frame(maxWidth: .infinity, maxHeight: .infinity)
+          } else if !viewModel.myPaidClasses.isEmpty {
+            ScrollView {
+              LazyVStack(spacing: 16) {
+                ForEach(viewModel.myPaidClasses) { order in
+                  NavigationLink(destination: MyClassDetailView(order: order)) {
+                    MyClassRowView(order: order)  // Renamed to avoid conflict
+                  }
+                  .buttonStyle(PlainButtonStyle())
+                  .onAppear {
+                    // Load more when reaching last item
+                    if order.id == viewModel.myPaidClasses.last?.id {
+                      Task {
+                        await viewModel.loadMoreClasses()
+                      }
+                    }
+                  }
+                }
+                
+                // Loading indicator for pagination
+                if viewModel.isLoading && !viewModel.myPaidClasses.isEmpty {
+                  ProgressView()
+                    .frame(height: 60)
                 }
               }
+              .padding(.horizontal, 20)
+              .padding(.top, 16)
             }
-          }
-          .listStyle(.plain)
-          .refreshable {
-            await viewModel.refreshMyClasses()
-          }
-        } else if viewModel.errorMessage != nil {
-          // Error state
-          ErrorStateView(
-            title: "Gagal Memuat Kelas",
-            message: viewModel.errorMessage ?? "Terjadi kesalahan saat memuat kelas Anda",
-            onRetry: {
-              Task {
-                await viewModel.refreshMyClasses()
+            .refreshable {
+              await viewModel.refreshMyClasses()
+            }
+          } else if viewModel.errorMessage != nil {
+            // Error state
+            ErrorStateView(
+              title: "Gagal Memuat Kelas",
+              message: viewModel.errorMessage ?? "Terjadi kesalahan saat memuat kelas Anda",
+              onRetry: {
+                Task {
+                  await viewModel.refreshMyClasses()
+                }
               }
-            }
-          )
-        } else {
-          // Empty state
-          EmptyMyClassView()
+            )
+          } else {
+            // Empty state
+            EmptyMyClassView()
+          }
         }
       }
       .navigationTitle("Kelas Saya")
+      .navigationBarTitleDisplayMode(.large)
       .onAppear {
         Task {
           await viewModel.fetchMyClasses()
         }
-      }
-      .refreshable {
-        await viewModel.refreshMyClasses()
       }
       .alert("Error", isPresented: .constant(viewModel.errorMessage != nil && !viewModel.myPaidClasses.isEmpty)) {
         Button("OK") {
@@ -78,98 +94,123 @@ struct MyClassView: View {
 }
 
 // MARK: - Supporting Views
-struct MyClassRowView: View {
+
+struct MyClassRowView: View {  // Renamed from MyClassCardView
   let order: MyOrder
   
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      HStack {
-        // Class icon
-        Image(systemName: "book.fill")
-          .font(.title2)
+    HStack(spacing: 16) {
+      // Modern Icon Container
+      ZStack {
+        RoundedRectangle(cornerRadius: 16)
+          .fill(
+            LinearGradient(
+              colors: [Color.main, Color.main.opacity(0.8)],
+              startPoint: .topLeading,
+              endPoint: .bottomTrailing
+            )
+          )
+          .frame(width: 64, height: 64)
+        
+        Image(systemName: "graduationcap.fill")
+          .font(.system(size: 28, weight: .medium))
           .foregroundColor(.white)
-          .frame(width: 40, height: 40)
-          .background(Color.main)
-          .cornerRadius(20)
+      }
+      
+      // Content
+      VStack(alignment: .leading, spacing: 8) {
+        // Title
+        Text(order.kelas.name)
+          .font(.headline)
+          .fontWeight(.semibold)
+          .foregroundColor(.primary)
+          .lineLimit(2)
+          .multilineTextAlignment(.leading)
         
-        VStack(alignment: .leading, spacing: 4) {
-          Text(order.kelas.name)
-            .font(.headline)
-            .lineLimit(2)
-          
-          Text(order.kelas.description)
-            .font(.subheadline)
-            .foregroundColor(.secondary)
-            .lineLimit(2)
-        }
-        
-        Spacer()
-        
-        // Status badge
+        // Description
+        Text(order.kelas.description)
+          .font(.subheadline)
+          .foregroundColor(.secondary)
+          .lineLimit(2)
+          .multilineTextAlignment(.leading)
         Text("Aktif")
           .font(.caption)
           .fontWeight(.medium)
           .foregroundColor(.green)
-          .padding(.horizontal, 8)
-          .padding(.vertical, 4)
-          .background(Color.green.opacity(0.1))
-          .cornerRadius(12)
       }
       
-      // Price info
-      HStack {
-        Text("Rp \(order.kelas.price.formatted(.number))")
-          .font(.subheadline)
-          .fontWeight(.semibold)
-          .foregroundColor(.main)
-        
-        Spacer()
-        
-        Image(systemName: "chevron.right")
-          .font(.caption)
-          .foregroundColor(.secondary)
-      }
+      // Chevron
+      Image(systemName: "chevron.right")
+        .font(.system(size: 14, weight: .medium))
+        .foregroundColor(.gray)  // Fixed: Use .gray instead of .tertiary
     }
     .padding()
     .background(Color(.systemBackground))
-    .cornerRadius(16)
-    .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+    .cornerRadius(20)
+    .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
+    .overlay(
+      RoundedRectangle(cornerRadius: 20)
+        .stroke(Color(.systemGray5), lineWidth: 0.5)
+    )
   }
 }
 
 struct EmptyMyClassView: View {
   var body: some View {
-    VStack(spacing: 20) {
-      Image(systemName: "book.closed")
-        .font(.system(size: 60))
-        .foregroundColor(.secondary)
-      
-      VStack(spacing: 8) {
-        Text("Belum Ada Kelas")
-          .font(.title2)
-          .fontWeight(.semibold)
+    VStack(spacing: 32) {
+      // Illustration
+      VStack(spacing: 20) {
+        ZStack {
+          Circle()
+            .fill(Color.main.opacity(0.1))
+            .frame(width: 120, height: 120)
+          
+          Image(systemName: "book.closed.fill")
+            .font(.system(size: 50, weight: .light))
+            .foregroundColor(.main)
+        }
         
-        Text("Anda belum memiliki kelas yang dibeli. Beli kelas untuk mulai belajar dan berlatih soal UKOM.")
-          .font(.body)
-          .foregroundColor(.secondary)
-          .multilineTextAlignment(.center)
-          .lineLimit(4)
+        VStack(spacing: 12) {
+          Text("Belum Ada Kelas")
+            .font(.title2)
+            .fontWeight(.bold)
+            .foregroundColor(.primary)
+          
+          Text("Mulai perjalanan belajar Anda dengan membeli kelas UKOM yang tersedia")
+            .font(.body)
+            .foregroundColor(.secondary)
+            .multilineTextAlignment(.center)
+            .lineLimit(3)
+            .padding(.horizontal, 20)
+        }
       }
       
+      // CTA Button
       NavigationLink(destination: SearchClassView()) {
-        Text("Cari Kelas")
-          .font(.headline)
-          .fontWeight(.semibold)
-          .foregroundColor(.white)
-          .frame(maxWidth: .infinity)
-          .frame(height: 50)
-          .background(Color.main)
-          .cornerRadius(16)
+        HStack(spacing: 12) {
+          Image(systemName: "magnifyingglass")
+            .font(.system(size: 18, weight: .medium))
+          
+          Text("Jelajahi Kelas")
+            .font(.headline)
+            .fontWeight(.semibold)
+        }
+        .foregroundColor(.white)
+        .frame(maxWidth: .infinity)
+        .frame(height: 56)
+        .background(
+          LinearGradient(
+            colors: [Color.main, Color.main.opacity(0.8)],
+            startPoint: .leading,
+            endPoint: .trailing
+          )
+        )
+        .cornerRadius(16)
       }
       .padding(.horizontal, 32)
     }
-    .padding(.horizontal, 32)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(Color(.systemGray6))
   }
 }
 
@@ -179,37 +220,54 @@ struct ErrorStateView: View {
   let onRetry: () -> Void
   
   var body: some View {
-    VStack(spacing: 20) {
-      Image(systemName: "exclamationmark.triangle")
-        .font(.system(size: 60))
-        .foregroundColor(.orange)
-      
-      VStack(spacing: 8) {
-        Text(title)
-          .font(.title2)
-          .fontWeight(.semibold)
+    VStack(spacing: 32) {
+      // Error illustration
+      VStack(spacing: 20) {
+        ZStack {
+          Circle()
+            .fill(Color.orange.opacity(0.1))
+            .frame(width: 120, height: 120)
+          
+          Image(systemName: "exclamationmark.triangle.fill")
+            .font(.system(size: 50, weight: .light))
+            .foregroundColor(.orange)
+        }
         
-        Text(message)
-          .font(.body)
-          .foregroundColor(.secondary)
-          .multilineTextAlignment(.center)
-          .lineLimit(4)
+        VStack(spacing: 12) {
+          Text(title)
+            .font(.title2)
+            .fontWeight(.bold)
+            .foregroundColor(.primary)
+          
+          Text(message)
+            .font(.body)
+            .foregroundColor(.secondary)
+            .multilineTextAlignment(.center)
+            .lineLimit(4)
+            .padding(.horizontal, 20)
+        }
       }
       
+      // Retry button
       Button(action: onRetry) {
-        Text("Coba Lagi")
-          .font(.headline)
-          .fontWeight(.semibold)
-          .foregroundColor(.white)
-          .frame(maxWidth: .infinity)
-          .frame(height: 50)
-          .background(Color.main)
-          .cornerRadius(16)
+        HStack(spacing: 12) {
+          Image(systemName: "arrow.clockwise")
+            .font(.system(size: 18, weight: .medium))
+          
+          Text("Coba Lagi")
+            .font(.headline)
+            .fontWeight(.semibold)
+        }
+        .foregroundColor(.white)
+        .frame(maxWidth: .infinity)
+        .frame(height: 56)
+        .background(Color.main)
+        .cornerRadius(16)
       }
       .padding(.horizontal, 32)
     }
-    .padding(.horizontal, 32)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(Color(.systemGray6))
   }
 }
 

@@ -68,7 +68,7 @@ struct MainTabView: View {
                     .environmentObject(tryOutCoordinator)
             }
         }
-        // Pembahasan Modal - Add this
+        // Pembahasan Modal
         .fullScreenCover(isPresented: $tryOutCoordinator.isShowingPembahasan) {
             if let tryOutId = tryOutCoordinator.currentPembahasanTryOutId {
                 NavigationStack {
@@ -90,12 +90,16 @@ struct MainTabView: View {
                 selectedIndex = 0
             }
         }
-        // Auto switch to home tab when returning from pembahasan - Add this
+        // Auto switch to home tab when returning from pembahasan
         .onChange(of: tryOutCoordinator.isShowingPembahasan) { _, isShowing in
             if !isShowing {
                 print("🏠 Auto-switching to home tab from pembahasan")
                 selectedIndex = 0
             }
+        }
+        // Listen for notification to switch to MyClass tab
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SwitchToMyClassTab"))) { _ in
+            selectedIndex = 2
         }
     }
 }

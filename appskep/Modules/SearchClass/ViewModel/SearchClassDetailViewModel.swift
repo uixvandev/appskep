@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 @MainActor
 class SearchClassDetailViewModel: ObservableObject {
@@ -13,23 +14,33 @@ class SearchClassDetailViewModel: ObservableObject {
     @Published var pakets: [Paket] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
-    
-    // For Ordering
-    @Published var orderError: String?
     @Published var showOrderAlert = false
-    @Published var redirectURL: URL?
+    @Published var orderError: String?
     @Published var showWebView = false
-
+    @Published var redirectURL: URL?
+    
+    // Add new properties for handling duplicate order
+    @Published var showDuplicateOrderAlert = false
+    @Published var duplicateOrderMessage: String?
+    
     func fetchAllDetails(id: Int) async {
         isLoading = true
         errorMessage = nil
         
-        await fetchClassDetail(id: id)
-        await fetchPakets(classId: id)
+        // Fetch both class details and pakets concurrently
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                await self.fetchClassDetail(id: id)
+            }
+            
+            group.addTask {
+                await self.fetchPakets(classId: id)
+            }
+        }
         
         isLoading = false
     }
-
+    
     private func fetchClassDetail(id: Int) async {
         do {
             let response: UkomClassDetailResponse = try await APIService.shared.performRequest(
@@ -55,18 +66,15 @@ class SearchClassDetailViewModel: ObservableObject {
                 responseType: PaketResponse.self
             )
             if response.success {
-                // Handle null data safely
-              self.pakets = response.data
+                self.pakets = response.data
                 print("✅ Fetched \(self.pakets.count) pakets for class \(classId)")
             } else {
                 print("❌ Failed to fetch pakets: \(response.message)")
                 self.pakets = []
             }
         } catch {
-            // Handle error gracefully
             print("❌ Error fetching pakets: \(error.localizedDescription)")
             self.pakets = []
-            // Don't set errorMessage here to avoid disrupting the main UI
         }
     }
     
@@ -89,8 +97,17 @@ class SearchClassDetailViewModel: ObservableObject {
                 self.orderError = response.message
                 self.showOrderAlert = true
             }
+        } catch APIError.conflict(let message, let errorCode) {
+            // Handle the specific case when user already has access
+            if errorCode == "order already paid" {
+                self.duplicateOrderMessage = "Anda sudah memiliki akses ke kelas ini. Silakan cek di menu 'Kelas Saya' untuk mengakses materi."
+                self.showDuplicateOrderAlert = true
+            } else {
+                self.duplicateOrderMessage = message
+                self.showDuplicateOrderAlert = true
+            }
         } catch {
-            self.orderError = error.localizedDescription
+            self.orderError = "Terjadi kesalahan: \(error.localizedDescription)"
             self.showOrderAlert = true
         }
     }

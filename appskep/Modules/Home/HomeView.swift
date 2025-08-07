@@ -59,25 +59,25 @@ struct HomeView: View {
   }
   
   // Add timer for unread count auto refresh
-      @State private var unreadCountTimer: Timer?
-      
-      // MARK: - Auto Refresh Functions for Unread Count
-      private func setupUnreadCountAutoRefresh() {
-          // Stop existing timer first
-          stopUnreadCountAutoRefresh()
-          
-          // Start new timer for unread count refresh every 60 seconds
-          unreadCountTimer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { _ in
-              Task {
-                  await notificationViewModel.fetchUnreadCount()
-              }
-          }
+  @State private var unreadCountTimer: Timer?
+  
+  // MARK: - Auto Refresh Functions for Unread Count
+  private func setupUnreadCountAutoRefresh() {
+    // Stop existing timer first
+    stopUnreadCountAutoRefresh()
+    
+    // Start new timer for unread count refresh every 60 seconds
+    unreadCountTimer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { _ in
+      Task {
+        await notificationViewModel.fetchUnreadCount()
       }
-      
-      private func stopUnreadCountAutoRefresh() {
-          unreadCountTimer?.invalidate()
-          unreadCountTimer = nil
-      }
+    }
+  }
+  
+  private func stopUnreadCountAutoRefresh() {
+    unreadCountTimer?.invalidate()
+    unreadCountTimer = nil
+  }
   
   private var headerView: some View {
     HStack {
@@ -122,63 +122,11 @@ struct HomeView: View {
   }
   
   private var promoBanner: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      Text("Beli Banyak, Diskon Lebih Besar!")
-        .font(.headline)
-        .fontWeight(.bold)
-        .foregroundColor(.white)
-      
-      Text("Semakin banyak belajar, makin besar diskonnya!")
-        .font(.subheadline)
-        .foregroundColor(.white.opacity(0.9))
-      
-      Button(action: {
-        // Navigate to search/promo page
-      }) {
-        Text("Beli sekarang")
-          .font(.caption)
-          .fontWeight(.semibold)
-          .foregroundColor(.blue)
-          .padding(.horizontal, 16)
-          .padding(.vertical, 8)
-          .background(Color.white)
-          .cornerRadius(20)
-      }
-    }
-    .padding()
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .background(
-      LinearGradient(
-        colors: [Color.blue.opacity(0.9), Color.blue.opacity(0.7)],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-      )
-    )
-    .cornerRadius(16)
-    .overlay(
-      // Decorative elements - buku dan pensil
-      HStack {
-        Spacer()
-        VStack {
-          Spacer()
-          HStack {
-            // Buku
-            Image(systemName: "book.fill")
-              .font(.system(size: 25))
-              .foregroundColor(.white.opacity(0.4))
-              .rotationEffect(.degrees(-15))
-            
-            // Pensil
-            Image(systemName: "pencil")
-              .font(.system(size: 30))
-              .foregroundColor(.white.opacity(0.3))
-              .rotationEffect(.degrees(25))
-          }
-          .padding(.trailing, 20)
-          .padding(.bottom, 10)
-        }
-      }
-    )
+    Image("Banner")
+      .resizable()
+      .scaledToFit()
+      .frame(maxWidth: .infinity)
+      .clipped()
   }
   
   private var myClassesSection: some View {

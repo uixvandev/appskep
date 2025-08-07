@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SafariServices
 
 struct SearchClassDetailView: View {
   let classId: Int
@@ -15,28 +16,21 @@ struct SearchClassDetailView: View {
   var body: some View {
     ZStack(alignment: .bottom) {
       if viewModel.isLoading {
-        ProgressView()
+        LoadingView()
       } else if let ukomClass = viewModel.ukomClass {
+        // Main content
         ScrollView {
-          VStack(spacing: 24) {
+          VStack(alignment: .leading, spacing: 24) {
             // Header
-            Image(systemName: "book.closed.fill")
-              .font(.system(size: 60))
-              .foregroundColor(.main)
-              .padding(25)
-              .background(Color.main.opacity(0.1))
-              .clipShape(RoundedRectangle(cornerRadius: 20))
-            
-            // Class Info
-            VStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 16) {
               Text(ukomClass.name)
-                .font(.title2)
+                .font(.title)
                 .fontWeight(.bold)
-                .multilineTextAlignment(.center)
+              
               Text(ukomClass.description)
                 .font(.body)
                 .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
+                .multilineTextAlignment(.leading) // Fixed alignment
             }
             
             // Paket List
@@ -49,22 +43,77 @@ struct SearchClassDetailView: View {
               }
             }
             
-            // Spacer to push content above the button
-            Spacer(minLength: 100)
+            // Bottom spacing for floating button
+            Rectangle()
+              .fill(Color.clear)
+              .frame(height: 80) // Reduced from 100
           }
           .padding()
         }
         
-        // Floating Button
-        Button{
-          Task { await viewModel.buyClass(classId: ukomClass.id)}
-        } label: {
-          CustomLongButton(title: "Beli kelas Rp \(ukomClass.price.formatted(.number))", titleColor: .white, bgButtonColor: .main)
+        // Floating Button at bottom
+        VStack(spacing: 0) {
+          // Gradient overlay to blend with content
+          LinearGradient(
+            colors: [Color.clear, Color(.systemBackground)],
+            startPoint: .top,
+            endPoint: .bottom
+          )
+          .frame(height: 20)
+          
+          // Button container
+          VStack(spacing: 0) {
+            Button {
+              Task {
+                await viewModel.buyClass(classId: ukomClass.id)
+              }
+            } label: {
+              CustomLongButton(
+                title: "Beli kelas Rp \(ukomClass.price.formatted(.number))",
+                titleColor: .white,
+                bgButtonColor: .main
+              )
+            }
+            .disabled(viewModel.isLoading)
+            
+            // Safe area bottom padding
+            Rectangle()
+              .fill(Color(.systemBackground))
+              .frame(height: getSafeAreaBottom())
+          }
+          .padding(.horizontal)
+          .background(Color(.systemBackground))
         }
-        .padding()
         
       } else if let errorMessage = viewModel.errorMessage {
-        Text("Error: \(errorMessage)")
+        // Error state
+        VStack(spacing: 20) {
+          Image(systemName: "exclamationmark.triangle")
+            .font(.system(size: 60))
+            .foregroundColor(.orange)
+          
+          Text("Gagal Memuat Detail")
+            .font(.title2)
+            .fontWeight(.bold)
+          
+          Text(errorMessage)
+            .font(.body)
+            .multilineTextAlignment(.center)
+            .foregroundColor(.secondary)
+            .padding(.horizontal, 32)
+          
+          Button("Coba Lagi") {
+            Task {
+              await viewModel.fetchAllDetails(id: classId)
+            }
+          }
+          .font(.headline)
+          .foregroundColor(.white)
+          .frame(width: 140, height: 44)
+          .background(Color.main)
+          .cornerRadius(12)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
     }
     .navigationTitle("Detail Kelas")
@@ -73,8 +122,11 @@ struct SearchClassDetailView: View {
     .toolbar {
       ToolbarItem(placement: .navigationBarLeading) {
         Button(action: { dismiss() }) {
-          Image(systemName: "chevron.left")
-          Text("Kembali")
+          HStack(spacing: 4) {
+            Image(systemName: "chevron.left")
+            Text("Kembali")
+          }
+          .foregroundColor(.main)
         }
       }
     }
@@ -83,8 +135,20 @@ struct SearchClassDetailView: View {
         await viewModel.fetchAllDetails(id: classId)
       }
     }
-    .alert(isPresented: $viewModel.showOrderAlert) {
-      Alert(title: Text("Gagal"), message: Text(viewModel.orderError ?? "Terjadi kesalahan"), dismissButton: .default(Text("OK")))
+    // Regular order error alert
+    .alert("Gagal", isPresented: $viewModel.showOrderAlert) {
+      Button("OK", role: .cancel) { }
+    } message: {
+      Text(viewModel.orderError ?? "Terjadi kesalahan")
+    }
+    // Duplicate order alert with navigation fix
+    .alert("Kelas Sudah Dimiliki", isPresented: $viewModel.showDuplicateOrderAlert) {
+      Button("Buka Kelas Saya") {
+        navigateToMyClasses()
+      }
+      Button("OK", role: .cancel) { }
+    } message: {
+      Text(viewModel.duplicateOrderMessage ?? "Anda sudah memiliki akses ke kelas ini.")
     }
     .sheet(isPresented: $viewModel.showWebView) {
       if let url = viewModel.redirectURL {
@@ -92,36 +156,70 @@ struct SearchClassDetailView: View {
       }
     }
   }
+  
+  // MARK: - Helper Methods
+  
+  private func navigateToMyClasses() {
+    // Dismiss current view first
+    dismiss()
+    
+    // Post notification to switch to MyClass tab
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+      NotificationCenter.default.post(
+        name: NSNotification.Name("SwitchToMyClassTab"),
+        object: nil
+      )
+    }
+  }
+  
+  private func getSafeAreaBottom() -> CGFloat {
+    guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+          let window = windowScene.windows.first else {
+      return 34 // Default bottom safe area
+    }
+    return window.safeAreaInsets.bottom
+  }
 }
 
 struct PaketRowView: View {
   let paket: Paket
   
   var body: some View {
-    VStack(alignment: .leading) {
+    VStack(alignment: .leading, spacing: 8) {
       Text(paket.name)
         .font(.headline)
+        .lineLimit(2)
+      
       HStack {
-        Text("\(paket.duration) menit") // Assuming 50 questions, adjust as needed
-          .font(.subheadline)
-          .foregroundColor(.secondary)
-        Text("•")
-          .font(.subheadline)
-          .foregroundColor(.secondary)
-        Text("\(paket.totalQuestions ?? 0) soal")
-          .font(.subheadline)
-          .foregroundColor(.secondary)
+        HStack(spacing: 4) {
+          Image(systemName: "clock")
+            .font(.caption)
+            .foregroundColor(.secondary)
+          Text("\(paket.duration) menit")
+            .font(.subheadline)
+            .foregroundColor(.secondary)
+        }
+        
+        Spacer()
+        
+        if let totalQuestions = paket.totalQuestions {
+          HStack(spacing: 4) {
+            Image(systemName: "questionmark.circle")
+              .font(.caption)
+              .foregroundColor(.secondary)
+            Text("\(totalQuestions) soal")
+              .font(.subheadline)
+              .foregroundColor(.secondary)
+          }
+        }
       }
     }
     .padding()
-    .frame(maxWidth: .infinity, alignment: .leading)
     .background(Color(.systemGray6))
-    .clipShape(RoundedRectangle(cornerRadius: 12))
+    .cornerRadius(12)
   }
 }
 
 #Preview {
-  NavigationView {
-    SearchClassDetailView(classId: 1)
-  }
+  SearchClassDetailView(classId: 1)
 }

@@ -13,7 +13,7 @@ class AuthManager: ObservableObject {
   
   @Published var isAuthenticated = false
   @Published var currentUser: UserModel?
-  @Published var authToken: String?
+  @Published var authToken: String? // Keep this separate from UserModel
   
   private let userDefaults = UserDefaults.standard
   private let tokenKey = "auth_token"
@@ -35,7 +35,16 @@ class AuthManager: ObservableObject {
     )
     
     if response.success, let authData = response.data {
-      saveAuthData(token: authData.token, user: authData.user)
+      // Store token separately
+      self.authToken = authData.token
+      self.currentUser = authData.user
+      self.isAuthenticated = true
+      
+      // Save to UserDefaults
+      userDefaults.set(authData.token, forKey: tokenKey)
+      if let userData = try? JSONEncoder().encode(authData.user) {
+        userDefaults.set(userData, forKey: userKey)
+      }
     }
     
     return response
@@ -53,7 +62,16 @@ class AuthManager: ObservableObject {
     )
     
     if response.success, let authData = response.data {
-      saveAuthData(token: authData.token, user: authData.user)
+      // Store token separately
+      self.authToken = authData.token
+      self.currentUser = authData.user
+      self.isAuthenticated = true
+      
+      // Save to UserDefaults
+      userDefaults.set(authData.token, forKey: tokenKey)
+      if let userData = try? JSONEncoder().encode(authData.user) {
+        userDefaults.set(userData, forKey: userKey)
+      }
     }
     
     return response
@@ -64,38 +82,34 @@ class AuthManager: ObservableObject {
     currentUser = nil
     isAuthenticated = false
     
+    // Clear UserDefaults
     userDefaults.removeObject(forKey: tokenKey)
     userDefaults.removeObject(forKey: userKey)
   }
   
-  private func saveAuthData(token: String, user: UserModel) {
-    authToken = token
-    currentUser = user
-    isAuthenticated = true
-    
-    userDefaults.set(token, forKey: tokenKey)
-    if let userData = try? JSONEncoder().encode(user) {
-      userDefaults.set(userData, forKey: userKey)
-    }
-  }
-  
   private func loadStoredAuth() {
-    authToken = userDefaults.string(forKey: tokenKey)
+    // Load token
+    if let token = userDefaults.string(forKey: tokenKey) {
+      self.authToken = token
+    }
     
+    // Load user
     if let userData = userDefaults.data(forKey: userKey),
        let user = try? JSONDecoder().decode(UserModel.self, from: userData) {
-      currentUser = user
+      self.currentUser = user
     }
     
-    isAuthenticated = authToken != nil && currentUser != nil
+    // Set authentication state
+    self.isAuthenticated = authToken != nil && currentUser != nil
   }
   
-  func updateUserData(_ updatedUser: UserModel) {
-    self.currentUser = updatedUser
+  // Method to update user profile
+  func updateCurrentUser(_ user: UserModel) {
+    self.currentUser = user
     
-    // Save to UserDefaults
-    if let encoded = try? JSONEncoder().encode(updatedUser) {
-      userDefaults.set(encoded, forKey: userKey)
+    // Save updated user to UserDefaults
+    if let userData = try? JSONEncoder().encode(user) {
+      userDefaults.set(userData, forKey: userKey)
     }
   }
 }

@@ -76,8 +76,8 @@ class EditProfileViewModel: ObservableObject {
             )
             
             if response.success, let updatedUser = response.data {
-                // Update AuthManager with new user data
-                AuthManager.shared.updateUserData(updatedUser)
+                // Update AuthManager with new user data using existing method
+                AuthManager.shared.updateCurrentUser(updatedUser)
                 isUpdateSuccessful = true
             } else {
                 errorMessage = response.message

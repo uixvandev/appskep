@@ -33,22 +33,22 @@ class APIService {
     // Log request details
     print("🌐 API Request: \(method.rawValue) \(url)")
     
-    // Tambahkan header otentikasi jika endpoint memerlukannya
+    // Add authorization header if endpoint requires it
     if endpoint.requiresAuth {
-      guard let token = await AuthManager.shared.authToken else {
+      // Use await for accessing @MainActor property from non-MainActor context
+      if let token = await AuthManager.shared.authToken {
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        print("🔐 Authorization header added")
+      } else {
         print("❌ No auth token available")
         throw APIError.unauthorized
       }
-      request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-      print("🔐 Authorization header added")
     }
     
     if let body = body {
       request.httpBody = body
-      // Log request body
-      if let jsonString = String(data: body, encoding: .utf8) {
-        print("📤 Request Body: \(jsonString)")
-      }
+      let bodyString = String(data: body, encoding: .utf8) ?? "Unable to convert body to string"
+      print("📤 Request Body: \(bodyString)")
     }
     
     do {
@@ -59,13 +59,11 @@ class APIService {
         throw APIError.invalidResponse
       }
       
-      // Log response details
+      let responseString = String(data: data, encoding: .utf8) ?? "Unable to convert response to string"
       print("📥 HTTP Status Code: \(httpResponse.statusCode)")
-      if let responseString = String(data: data, encoding: .utf8) {
-        print("📥 Response Body: \(responseString)")
-      }
+      print("📥 Response Body: \(responseString)")
       
-      if (200...299).contains(httpResponse.statusCode) {
+      if 200...299 ~= httpResponse.statusCode {
         do {
           let decodedResponse = try JSONDecoder().decode(T.self, from: data)
           print("✅ Successfully decoded response")
@@ -75,14 +73,43 @@ class APIService {
           throw APIError.decodingError
         }
       } else {
-        // Coba decode error response dari server
-        do {
-          let errorResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
-          print("❌ Server error: \(errorResponse.error ?? errorResponse.message)")
-          throw APIError.serverError(errorResponse.error ?? errorResponse.message)
-        } catch {
-          print("❌ HTTP \(httpResponse.statusCode) - Failed to decode error response")
-          throw APIError.serverError("HTTP \(httpResponse.statusCode)")
+        // Handle specific error status codes
+        switch httpResponse.statusCode {
+        case 401:
+          throw APIError.unauthorized
+          
+        case 409:
+          // Handle conflict errors (like duplicate orders)
+          do {
+            let errorResponse = try JSONDecoder().decode(ErrorResponse.self, from: data)
+            print("❌ Conflict error: \(errorResponse.message)")
+            throw APIError.conflict(errorResponse.message, errorResponse.error)
+          } catch is DecodingError {
+            // If we can't decode the error response, fall back to generic message
+            throw APIError.conflict("Konflik data", "conflict")
+          }
+          
+        case 422:
+          // Handle validation errors
+          do {
+            let errorResponse = try JSONDecoder().decode(ErrorResponse.self, from: data)
+            print("❌ Validation error: \(errorResponse.message)")
+            throw APIError.validationError(errorResponse.message)
+          } catch is DecodingError {
+            throw APIError.validationError("Data tidak valid")
+          }
+          
+        default:
+          // Try to decode generic error response
+          do {
+            let errorResponse = try JSONDecoder().decode(ErrorResponse.self, from: data)
+            print("❌ Server error: \(errorResponse.message)")
+            throw APIError.serverError(errorResponse.message)
+          } catch is DecodingError {
+            // Fallback for when we can't decode error response
+            print("❌ HTTP \(httpResponse.statusCode) - Failed to decode error response")
+            throw APIError.serverError("Terjadi kesalahan pada server (HTTP \(httpResponse.statusCode))")
+          }
         }
       }
     } catch is DecodingError {
@@ -95,6 +122,20 @@ class APIService {
       print("❌ Network error: \(error.localizedDescription)")
       throw APIError.networkError
     }
+  }
+}
+
+// MARK: - Error Response Model
+struct ErrorResponse: Codable {
+  let success: Bool
+  let message: String
+  let error: String?
+  
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    success = try container.decodeIfPresent(Bool.self, forKey: .success) ?? false
+    message = try container.decode(String.self, forKey: .message)
+    error = try container.decodeIfPresent(String.self, forKey: .error)
   }
 }
 
@@ -112,6 +153,8 @@ enum APIError: Error, LocalizedError {
   case decodingError
   case serverError(String)
   case unauthorized
+  case conflict(String, String?) // message, error code
+  case validationError(String)
   
   var errorDescription: String? {
     switch self {
@@ -127,6 +170,18 @@ enum APIError: Error, LocalizedError {
       return message
     case .unauthorized:
       return "Authorization header required. Please log in."
+    case .conflict(let message, _):
+      return message
+    case .validationError(let message):
+      return message
     }
+  }
+  
+  // Helper property to get the error code for conflict errors
+  var conflictErrorCode: String? {
+    if case .conflict(_, let errorCode) = self {
+      return errorCode
+    }
+    return nil
   }
 }
