@@ -55,4 +55,17 @@ class TryOutCoordinator: ObservableObject {
         isShowingPembahasan = false
         currentPembahasanTryOutId = nil
     }
+    
+    func transitionToPembahasan(tryOutId: Int) {
+        print("📚 TryOutCoordinator: Transitioning from result to pembahasan for try out ID: \(tryOutId)")
+        // Dismiss result first to avoid multiple sheets
+        isShowingResult = false
+        tryOutResult = nil
+        
+        // Present pembahasan after the result has been dismissed
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            self.currentPembahasanTryOutId = tryOutId
+            self.isShowingPembahasan = true
+        }
+    }
 }

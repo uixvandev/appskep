@@ -12,64 +12,64 @@ struct TransactionView: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Search and Filter Bar
-                searchAndFilterBar
-                
-                // Order List
-                orderListView
-            }
-            .navigationTitle("Riwayat Transaksi")
-            .navigationBarTitleDisplayMode(.large)
-            .navigationBarBackButtonHidden(false)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { viewModel.showFilterSheet = true }) {
-                        Image(systemName: "line.3.horizontal.decrease.circle")
-                            .foregroundColor(.main)
-                    }
+        VStack(spacing: 0) {
+            // Search and Filter Bar
+            searchAndFilterBar
+            
+            // Order List
+            orderListView
+        }
+        .navigationTitle("Riwayat Transaksi")
+        .navigationBarTitleDisplayMode(.large)
+        .navigationBarBackButtonHidden(false)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { viewModel.showFilterSheet = true }) {
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                        .foregroundColor(.main)
                 }
             }
-            .onAppear {
-                if viewModel.orders.isEmpty {
-                    Task {
-                        await viewModel.fetchOrders()
-                    }
+        }
+        .onAppear {
+            if viewModel.orders.isEmpty {
+                Task {
+                    await viewModel.fetchOrders()
                 }
             }
-            .refreshable {
-                await viewModel.refreshOrders()
-            }
-            .sheet(isPresented: $viewModel.showOrderDetail) {
-                if let order = viewModel.selectedOrder {
-                    OrderDetailView(order: order)
-                        .environmentObject(viewModel)
-                }
-            }
-            .sheet(isPresented: $viewModel.showFilterSheet) {
-                FilterSheetView()
+        }
+        .refreshable {
+            await viewModel.refreshOrders()
+        }
+        .sheet(isPresented: $viewModel.showOrderDetail) {
+            if let order = viewModel.selectedOrder {
+                OrderDetailView(order: order)
                     .environmentObject(viewModel)
             }
-            .fullScreenCover(isPresented: $viewModel.showPaymentWebView) {
-                if let url = viewModel.paymentURL {
+        }
+        .sheet(isPresented: $viewModel.showFilterSheet) {
+            FilterSheetView()
+                .environmentObject(viewModel)
+        }
+        .fullScreenCover(isPresented: $viewModel.showPaymentWebView) {
+            if let url = viewModel.paymentURL {
+                NavigationStack {
                     PaymentWebView(url: url)
                         .environmentObject(viewModel)
                 }
             }
-            .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
-                Button("OK") {
-                    viewModel.clearError()
+        }
+        .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
+            Button("OK") {
+                viewModel.clearError()
+            }
+            Button("Coba Lagi") {
+                Task {
+                    await viewModel.refreshOrders()
                 }
-                Button("Coba Lagi") {
-                    Task {
-                        await viewModel.refreshOrders()
-                    }
-                }
-            } message: {
-                if let errorMessage = viewModel.errorMessage {
-                    Text(errorMessage)
-                }
+            }
+        } message: {
+            if let errorMessage = viewModel.errorMessage {
+                Text(errorMessage)
             }
         }
     }

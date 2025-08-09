@@ -15,23 +15,21 @@ struct RegisterView: View {
     @State private var showAlert = false
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    headerSection
-                    titleSection
-                    formSection
-                    termsSection
-                    actionSection
-                    loginSection
-                }
-                .padding()
+        ScrollView {
+            VStack(spacing: 24) {
+                headerSection
+                titleSection
+                formSection
+                termsSection
+                actionSection
+                loginSection
             }
-            .navigationBarBackButtonHidden(true)
-            .alert(isPresented: $showAlert, content: buildAlert)
-            .onChange(of: viewModel.alertType) { _, type in
-                showAlert = type != .none
-            }
+            .padding()
+        }
+        .navigationBarBackButtonHidden(true)
+        .alert(isPresented: $showAlert, content: buildAlert)
+        .onChange(of: viewModel.alertType) { _, type in
+            showAlert = type != .none
         }
     }
 
@@ -177,5 +175,7 @@ struct RegisterView: View {
 }
 
 #Preview {
-    RegisterView()
+    NavigationStack {
+        RegisterView()
+    }
 }

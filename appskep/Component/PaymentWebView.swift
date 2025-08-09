@@ -18,56 +18,54 @@ struct PaymentWebView: View {
     @State private var showCloseConfirmation = false
     
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Progress Bar
-                if isLoading {
-                    ProgressView()
-                        .frame(height: 4)
-                        .frame(maxWidth: .infinity)
-                        .tint(.main)
-                }
-                
-                // WebView
-                WebViewRepresentable(
-                    url: url,
-                    isLoading: $isLoading,
-                    canGoBack: $canGoBack,
-                    canGoForward: $canGoForward
-                ) { success, orderID in
-                    Task {
-                        await viewModel.handlePaymentCallback(success: success, orderID: orderID)
-                        dismiss()
-                    }
+        VStack(spacing: 0) {
+            // Progress Bar
+            if isLoading {
+                ProgressView()
+                    .frame(height: 4)
+                    .frame(maxWidth: .infinity)
+                    .tint(.main)
+            }
+            
+            // WebView
+            WebViewRepresentable(
+                url: url,
+                isLoading: $isLoading,
+                canGoBack: $canGoBack,
+                canGoForward: $canGoForward
+            ) { success, orderID in
+                Task {
+                    await viewModel.handlePaymentCallback(success: success, orderID: orderID)
+                    dismiss()
                 }
             }
-            .navigationTitle("Pembayaran")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Tutup") {
-                        showCloseConfirmation = true
-                    }
+        }
+        .navigationTitle("Pembayaran")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Tutup") {
+                    showCloseConfirmation = true
                 }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack {
-                        Button(action: {
-                            // Go back in webview
-                        }) {
-                            Image(systemName: "chevron.left")
-                                .foregroundColor(canGoBack ? .main : .gray)
-                        }
-                        .disabled(!canGoBack)
-                        
-                        Button(action: {
-                            // Go forward in webview
-                        }) {
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(canGoForward ? .main : .gray)
-                        }
-                        .disabled(!canGoForward)
+            }
+            
+            ToolbarItem(placement: .navigationBarTrailing) {
+                HStack {
+                    Button(action: {
+                        // Go back in webview
+                    }) {
+                        Image(systemName: "chevron.left")
+                            .foregroundColor(canGoBack ? .main : .gray)
                     }
+                    .disabled(!canGoBack)
+                    
+                    Button(action: {
+                        // Go forward in webview
+                    }) {
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(canGoForward ? .main : .gray)
+                    }
+                    .disabled(!canGoForward)
                 }
             }
         }
@@ -180,6 +178,8 @@ struct WebViewRepresentable: UIViewRepresentable {
 }
 
 #Preview {
-    PaymentWebView(url: URL(string: "https://simulator.sandbox.midtrans.com")!)
-        .environmentObject(TransactionViewModel())
+    NavigationStack {
+        PaymentWebView(url: URL(string: "https://simulator.sandbox.midtrans.com")!)
+            .environmentObject(TransactionViewModel())
+    }
 }

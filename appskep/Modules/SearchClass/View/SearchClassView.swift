@@ -25,30 +25,28 @@ struct SearchClassView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                if viewModel.isLoading && viewModel.ukomClasses.isEmpty {
-                    ProgressView()
-                        .padding(.top, 50)
-                } else {
-                    LazyVGrid(columns: columns, spacing: 16) {
-                        ForEach(filteredClasses) { ukomClass in
-                            NavigationLink(destination: SearchClassDetailView(classId: ukomClass.id)) {
-                                ClassCardView(ukomClass: ukomClass)
-                            }
-                            .buttonStyle(PlainButtonStyle()) // Removes blue tint from navigation link
+        ScrollView {
+            if viewModel.isLoading && viewModel.ukomClasses.isEmpty {
+                ProgressView()
+                    .padding(.top, 50)
+            } else {
+                LazyVGrid(columns: columns, spacing: 16) {
+                    ForEach(filteredClasses) { ukomClass in
+                        NavigationLink(destination: SearchClassDetailView(classId: ukomClass.id)) {
+                            ClassCardView(ukomClass: ukomClass)
                         }
+                        .buttonStyle(PlainButtonStyle()) // Removes blue tint from navigation link
                     }
-                    .padding()
                 }
+                .padding()
             }
-            .navigationTitle("Cari Kelas")
-            .searchable(text: $searchText, prompt: "Search")
-            .onAppear {
-                if viewModel.ukomClasses.isEmpty {
-                    Task {
-                        await viewModel.fetchUkomClasses()
-                    }
+        }
+        .navigationTitle("Cari Kelas")
+        .searchable(text: $searchText, prompt: "Search")
+        .onAppear {
+            if viewModel.ukomClasses.isEmpty {
+                Task {
+                    await viewModel.fetchUkomClasses()
                 }
             }
         }

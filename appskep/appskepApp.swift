@@ -14,15 +14,17 @@ struct appskepApp: App {
     
     var body: some Scene {
         WindowGroup {
-            Group {
-                if authManager.isAuthenticated {
-                    MainTabView()
-                        .environmentObject(tryOutCoordinator)
-                } else {
-                    LoginView()
+            NavigationStack {
+                Group {
+                    if authManager.isAuthenticated {
+                        MainTabView()
+                    } else {
+                        LoginView()
+                    }
                 }
             }
             .environmentObject(authManager)
+            .environmentObject(tryOutCoordinator)
             .preferredColorScheme(.light)
         }
     }

@@ -3,7 +3,6 @@ import SwiftUI
 struct TryOutResultView: View {
   let result: TryOutResult
   @EnvironmentObject private var tryOutCoordinator: TryOutCoordinator
-  @State private var showPembahasan = false
   
   // Computed properties for statistics
   private var totalQuestions: Int {
@@ -78,11 +77,6 @@ struct TryOutResultView: View {
     }
     .navigationBarHidden(true)
     .navigationBarBackButtonHidden(true)
-    .fullScreenCover(isPresented: $showPembahasan) {
-      NavigationStack {
-        PembahasanView(tryOutId: result.id)
-      }
-    }
   }
   
   private var scoreCircleView: some View {
@@ -151,7 +145,7 @@ struct TryOutResultView: View {
     VStack(spacing: 16) {
       // Lihat Pembahasan Button
       Button(action: {
-        showPembahasan = true
+        tryOutCoordinator.transitionToPembahasan(tryOutId: result.id)
       }) {
         Text("Lihat pembahasan soal")
           .font(.headline)

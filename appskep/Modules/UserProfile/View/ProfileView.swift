@@ -13,48 +13,46 @@ struct ProfileView: View {
     @State private var showEditProfile = false
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    // User Info Header
-                    userInfoHeader
+        ScrollView {
+            VStack(spacing: 24) {
+                // User Info Header
+                userInfoHeader
 
-                    // Menu Options
-                    VStack(spacing: 16) {
-                        NavigationLink(destination: TryOutHistoryView()) {
-                            ProfileRowView(iconName: "clock", title: "Riwayat Try Out")
-                        }
-                        
-                        NavigationLink(destination: TransactionView()) {
-                            ProfileRowView(iconName: "creditcard", title: "Transaksi")
-                        }
-                        
-                        NavigationLink(destination: ChangePasswordView()) {
-                            ProfileRowView(iconName: "lock.shield", title: "Keamanan & Kata Sandi")
-                        }
+                // Menu Options
+                VStack(spacing: 16) {
+                    NavigationLink(destination: TryOutHistoryView()) {
+                        ProfileRowView(iconName: "clock", title: "Riwayat Try Out")
                     }
-
-                    // Logout Button
-                    logoutButton
                     
-                    Spacer()
+                    NavigationLink(destination: TransactionView()) {
+                        ProfileRowView(iconName: "creditcard", title: "Transaksi")
+                    }
+                    
+                    NavigationLink(destination: ChangePasswordView()) {
+                        ProfileRowView(iconName: "lock.shield", title: "Keamanan & Kata Sandi")
+                    }
                 }
-                .padding()
+
+                // Logout Button
+                logoutButton
+                
+                Spacer()
             }
-            .navigationTitle("Profil")
-            .background(Color(.systemGray6).ignoresSafeArea())
-            .alert("Konfirmasi Keluar", isPresented: $showLogoutConfirmation) {
-                Button("Batal", role: .cancel) { }
-                Button("Keluar", role: .destructive) {
-                    authManager.logout()
-                }
-            } message: {
-                Text("Apakah Anda yakin ingin keluar dari akun Anda?")
+            .padding()
+        }
+        .navigationTitle("Profil")
+        .background(Color(.systemGray6).ignoresSafeArea())
+        .alert("Konfirmasi Keluar", isPresented: $showLogoutConfirmation) {
+            Button("Batal", role: .cancel) { }
+            Button("Keluar", role: .destructive) {
+                authManager.logout()
             }
-            .sheet(isPresented: $showEditProfile) {
-                EditProfileView()
-                    .environmentObject(authManager)
-            }
+        } message: {
+            Text("Apakah Anda yakin ingin keluar dari akun Anda?")
+        }
+        .sheet(isPresented: $showEditProfile) {
+            EditProfileView()
+                .environmentObject(authManager)
         }
     }
 
@@ -130,6 +128,8 @@ struct ProfileRowView: View {
 }
 
 #Preview {
-    ProfileView()
-        .environmentObject(AuthManager.shared)
+    NavigationStack {
+        ProfileView()
+            .environmentObject(AuthManager.shared)
+    }
 }

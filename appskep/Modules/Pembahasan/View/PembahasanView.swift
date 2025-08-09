@@ -121,8 +121,8 @@ struct PembahasanView: View {
         // Header content
         HStack(spacing: 16) {
           Button(action: {
-            // Use coordinator to close instead of dismiss
-            tryOutCoordinator.closePembahasan()
+            // Prefer environment dismiss to support both modal & push
+            dismiss()
           }) {
             Image(systemName: "chevron.left")
               .font(.title2)
@@ -237,8 +237,8 @@ struct PembahasanView: View {
         // Next Button (Right Arrow)
         Button(action: {
           if viewModel.isLastQuestion {
-            // Use coordinator to close instead of dismiss
-            tryOutCoordinator.closePembahasan()
+            // Prefer environment dismiss to support both modal & push
+            dismiss()
           } else {
             viewModel.goToNextQuestion()
           }

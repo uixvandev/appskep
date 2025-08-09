@@ -45,7 +45,7 @@ enum APIEndpoint {
   }
   
   var baseURL: String {
-    return "https://4928889e85cc.ngrok-free.app" // Ganti dengan base URL Anda
+    return "https://37089fbdf37d.ngrok-free.app" // Ganti dengan base URL Anda
   }
   
   var path: String {

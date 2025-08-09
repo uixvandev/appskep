@@ -20,40 +20,38 @@ struct HomeView: View {
   ]
   
   var body: some View {
-    NavigationStack {
-      ScrollView {
-        VStack(alignment: .leading, spacing: 24) {
-          // Header dengan salam dan notifikasi
-          headerView
-          
-          // Promo Banner
-          promoBanner
-          
-          // Kelas Saya Section
-          myClassesSection
-          
-          // Kelas Terbaru Section
-          newClassesSection
-        }
-        .padding()
+    ScrollView {
+      VStack(alignment: .leading, spacing: 24) {
+        // Header dengan salam dan notifikasi
+        headerView
+        
+        // Promo Banner
+        promoBanner
+        
+        // Kelas Saya Section
+        myClassesSection
+        
+        // Kelas Terbaru Section
+        newClassesSection
       }
-      .navigationBarHidden(true)
-      .onAppear {
-        Task {
-          await myClassViewModel.fetchMyClasses()
-          await searchViewModel.fetchUkomClasses()
-          await notificationViewModel.fetchUnreadCount()
-        }
-        setupUnreadCountAutoRefresh()
+      .padding()
+    }
+    .navigationBarHidden(true)
+    .onAppear {
+      Task {
+        await myClassViewModel.fetchMyClasses()
+        await searchViewModel.fetchUkomClasses()
+        await notificationViewModel.fetchUnreadCount()
       }
-      .onDisappear {
-        stopUnreadCountAutoRefresh()
-      }
-      .sheet(isPresented: $showNotifications) {
-        NavigationStack {
-          NotificationView()
-            .environmentObject(notificationViewModel)
-        }
+      setupUnreadCountAutoRefresh()
+    }
+    .onDisappear {
+      stopUnreadCountAutoRefresh()
+    }
+    .sheet(isPresented: $showNotifications) {
+      NavigationStack {
+        NotificationView()
+          .environmentObject(notificationViewModel)
       }
     }
   }

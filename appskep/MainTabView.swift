@@ -13,9 +13,7 @@ struct MainTabView: View {
     
     var body: some View {
         TabView(selection: $selectedIndex) {
-            NavigationStack {
-                HomeView()
-            }
+            HomeView()
             .tabItem {
                 let iconName = (selectedIndex == 0) ? "HomeBold" : "Home"
                 Image(iconName)
@@ -23,9 +21,7 @@ struct MainTabView: View {
             }
             .tag(0)
             
-            NavigationStack {
-                SearchClassView()
-            }
+            SearchClassView()
             .tabItem {
                 let iconName = (selectedIndex == 1) ? "SearchBold" : "Search"
                 Image(iconName)
@@ -33,9 +29,7 @@ struct MainTabView: View {
             }
             .tag(1)
             
-            NavigationStack {
-                MyClassView()
-            }
+            MyClassView()
             .tabItem {
                 let iconName = (selectedIndex == 2) ? "PaperBold" : "Paper"
                 Image(iconName)
@@ -43,9 +37,7 @@ struct MainTabView: View {
             }
             .tag(2)
             
-            NavigationStack {
-                ProfileView()
-            }
+            ProfileView()
             .tabItem {
                 let iconName = (selectedIndex == 3) ? "ProfileBold" : "Profile"
                 Image(iconName)
@@ -68,7 +60,7 @@ struct MainTabView: View {
                     .environmentObject(tryOutCoordinator)
             }
         }
-        // Pembahasan Modal
+        // Pembahasan Modal (own local stack is fine for modal-only flow)
         .fullScreenCover(isPresented: $tryOutCoordinator.isShowingPembahasan) {
             if let tryOutId = tryOutCoordinator.currentPembahasanTryOutId {
                 NavigationStack {

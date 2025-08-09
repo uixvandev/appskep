@@ -12,62 +12,60 @@ struct ChangePasswordView: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Header Info
-                    headerSection
-                    
-                    // Password Form
-                    passwordFormSection
-                    
-                    // Save Button
-                    saveButtonSection
-                }
-                .padding()
+        ScrollView {
+            VStack(spacing: 24) {
+                // Header Info
+                headerSection
+                
+                // Password Form
+                passwordFormSection
+                
+                // Save Button
+                saveButtonSection
             }
-            .navigationTitle("Keamanan & Kata Sandi")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Kembali") {
-                        dismiss()
-                    }
-                    .foregroundColor(.main)
-                }
-            }
-            .background(Color(.systemGray6).ignoresSafeArea())
-            .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
-                Button("OK") {
-                    viewModel.clearError()
-                }
-            } message: {
-                if let errorMessage = viewModel.errorMessage {
-                    Text(errorMessage)
-                }
-            }
-            .alert("Berhasil", isPresented: $viewModel.isPasswordChanged) {
-                Button("OK") {
+            .padding()
+        }
+        .navigationTitle("Keamanan & Kata Sandi")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button("Kembali") {
                     dismiss()
                 }
-            } message: {
-                Text("Password berhasil diubah. Silakan login kembali dengan password baru Anda.")
+                .foregroundColor(.main)
             }
-            .overlay {
-                if viewModel.isLoading {
-                    Color.black.opacity(0.3)
-                        .ignoresSafeArea()
-                    
-                    VStack {
-                        ProgressView()
-                        Text("Mengubah password...")
-                            .font(.headline)
-                            .padding(.top)
-                    }
-                    .padding()
-                    .background(Color(.systemBackground))
-                    .cornerRadius(16)
+        }
+        .background(Color(.systemGray6).ignoresSafeArea())
+        .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
+            Button("OK") {
+                viewModel.clearError()
+            }
+        } message: {
+            if let errorMessage = viewModel.errorMessage {
+                Text(errorMessage)
+            }
+        }
+        .alert("Berhasil", isPresented: $viewModel.isPasswordChanged) {
+            Button("OK") {
+                dismiss()
+            }
+        } message: {
+            Text("Password berhasil diubah. Silakan login kembali dengan password baru Anda.")
+        }
+        .overlay {
+            if viewModel.isLoading {
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                
+                VStack {
+                    ProgressView()
+                    Text("Mengubah password...")
+                        .font(.headline)
+                        .padding(.top)
                 }
+                .padding()
+                .background(Color(.systemBackground))
+                .cornerRadius(16)
             }
         }
     }
@@ -248,5 +246,7 @@ struct SecurityTipRow: View {
 }
 
 #Preview {
-    ChangePasswordView()
+    NavigationStack {
+        ChangePasswordView()
+    }
 }

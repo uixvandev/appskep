@@ -11,83 +11,81 @@ struct MyClassView: View {
   @StateObject private var viewModel = MyClassViewModel()
   
   var body: some View {
-    NavigationStack {
-      ZStack {
-        // Background
-        Color(.systemGray6)
-          .ignoresSafeArea()
-        
-        Group {
-          if viewModel.isLoading && viewModel.myPaidClasses.isEmpty {
-            LoadingView()
-              .frame(maxWidth: .infinity, maxHeight: .infinity)
-          } else if !viewModel.myPaidClasses.isEmpty {
-            ScrollView {
-              LazyVStack(spacing: 16) {
-                ForEach(viewModel.myPaidClasses) { order in
-                  NavigationLink(destination: MyClassDetailView(order: order)) {
-                    MyClassRowView(order: order)  // Renamed to avoid conflict
-                  }
-                  .buttonStyle(PlainButtonStyle())
-                  .onAppear {
-                    // Load more when reaching last item
-                    if order.id == viewModel.myPaidClasses.last?.id {
-                      Task {
-                        await viewModel.loadMoreClasses()
-                      }
+    ZStack {
+      // Background
+      Color(.systemGray6)
+        .ignoresSafeArea()
+      
+      Group {
+        if viewModel.isLoading && viewModel.myPaidClasses.isEmpty {
+          LoadingView()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if !viewModel.myPaidClasses.isEmpty {
+          ScrollView {
+            LazyVStack(spacing: 16) {
+              ForEach(viewModel.myPaidClasses) { order in
+                NavigationLink(destination: MyClassDetailView(order: order)) {
+                  MyClassRowView(order: order)  // Renamed to avoid conflict
+                }
+                .buttonStyle(PlainButtonStyle())
+                .onAppear {
+                  // Load more when reaching last item
+                  if order.id == viewModel.myPaidClasses.last?.id {
+                    Task {
+                      await viewModel.loadMoreClasses()
                     }
                   }
                 }
-                
-                // Loading indicator for pagination
-                if viewModel.isLoading && !viewModel.myPaidClasses.isEmpty {
-                  ProgressView()
-                    .frame(height: 60)
-                }
               }
-              .padding(.horizontal, 20)
-              .padding(.top, 16)
-            }
-            .refreshable {
-              await viewModel.refreshMyClasses()
-            }
-          } else if viewModel.errorMessage != nil {
-            // Error state
-            ErrorStateView(
-              title: "Gagal Memuat Kelas",
-              message: viewModel.errorMessage ?? "Terjadi kesalahan saat memuat kelas Anda",
-              onRetry: {
-                Task {
-                  await viewModel.refreshMyClasses()
-                }
+              
+              // Loading indicator for pagination
+              if viewModel.isLoading && !viewModel.myPaidClasses.isEmpty {
+                ProgressView()
+                  .frame(height: 60)
               }
-            )
-          } else {
-            // Empty state
-            EmptyMyClassView()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
           }
-        }
-      }
-      .navigationTitle("Kelas Saya")
-      .navigationBarTitleDisplayMode(.large)
-      .onAppear {
-        Task {
-          await viewModel.fetchMyClasses()
-        }
-      }
-      .alert("Error", isPresented: .constant(viewModel.errorMessage != nil && !viewModel.myPaidClasses.isEmpty)) {
-        Button("OK") {
-          viewModel.clearError()
-        }
-        Button("Refresh") {
-          Task {
+          .refreshable {
             await viewModel.refreshMyClasses()
           }
+        } else if viewModel.errorMessage != nil {
+          // Error state
+          ErrorStateView(
+            title: "Gagal Memuat Kelas",
+            message: viewModel.errorMessage ?? "Terjadi kesalahan saat memuat kelas Anda",
+            onRetry: {
+              Task {
+                await viewModel.refreshMyClasses()
+              }
+            }
+          )
+        } else {
+          // Empty state
+          EmptyMyClassView()
         }
-      } message: {
-        if let errorMessage = viewModel.errorMessage {
-          Text(errorMessage)
+      }
+    }
+    .navigationTitle("Kelas Saya")
+    .navigationBarTitleDisplayMode(.large)
+    .onAppear {
+      Task {
+        await viewModel.fetchMyClasses()
+      }
+    }
+    .alert("Error", isPresented: .constant(viewModel.errorMessage != nil && !viewModel.myPaidClasses.isEmpty)) {
+      Button("OK") {
+        viewModel.clearError()
+      }
+      Button("Refresh") {
+        Task {
+          await viewModel.refreshMyClasses()
         }
+      }
+    } message: {
+      if let errorMessage = viewModel.errorMessage {
+        Text(errorMessage)
       }
     }
   }
