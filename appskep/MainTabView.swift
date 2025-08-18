@@ -13,7 +13,9 @@ struct MainTabView: View {
     
     var body: some View {
         TabView(selection: $selectedIndex) {
-            HomeView()
+            NavigationStack {
+                HomeView()
+            }
             .tabItem {
                 let iconName = (selectedIndex == 0) ? "HomeBold" : "Home"
                 Image(iconName)
@@ -21,15 +23,19 @@ struct MainTabView: View {
             }
             .tag(0)
             
-            SearchClassView()
+            NavigationStack {
+                SearchClassView()
+            }
             .tabItem {
                 let iconName = (selectedIndex == 1) ? "SearchBold" : "Search"
                 Image(iconName)
-                Text("Search")
+                Text("Cari kelas")
             }
             .tag(1)
             
-            MyClassView()
+            NavigationStack {
+                MyClassView()
+            }
             .tabItem {
                 let iconName = (selectedIndex == 2) ? "PaperBold" : "Paper"
                 Image(iconName)
@@ -37,7 +43,9 @@ struct MainTabView: View {
             }
             .tag(2)
             
-            ProfileView()
+            NavigationStack {
+                ProfileView()
+            }
             .tabItem {
                 let iconName = (selectedIndex == 3) ? "ProfileBold" : "Profile"
                 Image(iconName)
@@ -47,26 +55,30 @@ struct MainTabView: View {
         }
         .tint(.main)
         // Try Out Modal
-        .fullScreenCover(isPresented: $tryOutCoordinator.isShowingTryOut) {
-            if let tryOutId = tryOutCoordinator.currentTryOutId {
-                TryOutView(tryOutId: tryOutId)
-                    .environmentObject(tryOutCoordinator)
-            }
+        .fullScreenCover(isPresented: Binding(
+            get: { tryOutCoordinator.isShowingTryOut && tryOutCoordinator.currentTryOutId != nil },
+            set: { newValue in tryOutCoordinator.isShowingTryOut = newValue }
+        )) {
+            // At this point currentTryOutId is non-nil
+            TryOutView(tryOutId: tryOutCoordinator.currentTryOutId!)
+                .environmentObject(tryOutCoordinator)
         }
         // Result Modal
-        .fullScreenCover(isPresented: $tryOutCoordinator.isShowingResult) {
-            if let result = tryOutCoordinator.tryOutResult {
-                TryOutResultView(result: result)
-                    .environmentObject(tryOutCoordinator)
-            }
+        .fullScreenCover(isPresented: Binding(
+            get: { tryOutCoordinator.isShowingResult && tryOutCoordinator.tryOutResult != nil },
+            set: { newValue in tryOutCoordinator.isShowingResult = newValue }
+        )) {
+            TryOutResultView(result: tryOutCoordinator.tryOutResult!)
+                .environmentObject(tryOutCoordinator)
         }
         // Pembahasan Modal (own local stack is fine for modal-only flow)
-        .fullScreenCover(isPresented: $tryOutCoordinator.isShowingPembahasan) {
-            if let tryOutId = tryOutCoordinator.currentPembahasanTryOutId {
-                NavigationStack {
-                    PembahasanView(tryOutId: tryOutId)
-                        .environmentObject(tryOutCoordinator)
-                }
+        .fullScreenCover(isPresented: Binding(
+            get: { tryOutCoordinator.isShowingPembahasan && tryOutCoordinator.currentPembahasanTryOutId != nil },
+            set: { newValue in tryOutCoordinator.isShowingPembahasan = newValue }
+        )) {
+            NavigationStack {
+                PembahasanView(tryOutId: tryOutCoordinator.currentPembahasanTryOutId!)
+                    .environmentObject(tryOutCoordinator)
             }
         }
         // Auto switch to home tab when returning from try out
@@ -92,6 +104,8 @@ struct MainTabView: View {
         // Listen for notification to switch to MyClass tab
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SwitchToMyClassTab"))) { _ in
             selectedIndex = 2
+            // Also nudge MyClassView to refresh with retry in case of backend delay
+            NotificationCenter.default.post(name: NSNotification.Name("RefreshMyClassesWithRetry"), object: nil)
         }
     }
 }
@@ -100,4 +114,5 @@ struct MainTabView: View {
     MainTabView()
         .environmentObject(AuthManager.shared)
         .environmentObject(TryOutCoordinator())
+        .environmentObject(MyClassViewModel())
 }

@@ -20,7 +20,10 @@ struct SearchClassView: View {
         if searchText.isEmpty {
             return viewModel.ukomClasses
         } else {
-            return viewModel.ukomClasses.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+            return viewModel.ukomClasses.filter {
+                $0.name.localizedCaseInsensitiveContains(searchText) ||
+                $0.description.localizedCaseInsensitiveContains(searchText)
+            }
         }
     }
 
@@ -30,19 +33,41 @@ struct SearchClassView: View {
                 ProgressView()
                     .padding(.top, 50)
             } else {
-                LazyVGrid(columns: columns, spacing: 16) {
-                    ForEach(filteredClasses) { ukomClass in
-                        NavigationLink(destination: SearchClassDetailView(classId: ukomClass.id)) {
-                            ClassCardView(ukomClass: ukomClass)
+                if filteredClasses.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 40))
+                            .foregroundColor(.secondary)
+                        Text("Tidak ada hasil")
+                            .font(.headline)
+                        if !searchText.isEmpty {
+                            Text("Coba kata kunci lain atau kurangi filter pencarian.")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
                         }
-                        .buttonStyle(PlainButtonStyle()) // Removes blue tint from navigation link
                     }
+                    .frame(maxWidth: .infinity, minHeight: 240)
+                    .padding()
+                } else {
+                    LazyVGrid(columns: columns, spacing: 16) {
+                        ForEach(filteredClasses) { ukomClass in
+                            NavigationLink(destination: SearchClassDetailView(classId: ukomClass.id)) {
+                                ClassCardView(ukomClass: ukomClass)
+                            }
+                            .buttonStyle(PlainButtonStyle()) // Removes blue tint from navigation link
+                        }
+                    }
+                    .padding()
                 }
-                .padding()
             }
         }
         .navigationTitle("Cari Kelas")
-        .searchable(text: $searchText, prompt: "Search")
+        .navigationBarTitleDisplayMode(.large)
+        .searchable(
+            text: $searchText,
+            placement: .navigationBarDrawer(displayMode: .always),
+            prompt: "Cari kelas…"
+        )
         .onAppear {
             if viewModel.ukomClasses.isEmpty {
                 Task {

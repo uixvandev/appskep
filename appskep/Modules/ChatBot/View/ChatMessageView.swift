@@ -16,6 +16,11 @@ struct ChatMessageView: View {
         self.onDelete = onDelete
     }
     
+    // Markdown parsing for bold/italic
+    private var attributedMessage: AttributedString {
+        (try? AttributedString(markdown: message.content)) ?? AttributedString(message.content)
+    }
+    
     var body: some View {
         HStack {
             if message.isUser {
@@ -31,7 +36,6 @@ struct ChatMessageView: View {
     private var userMessageView: some View {
         VStack(alignment: .trailing, spacing: 4) {
             HStack(spacing: 8) {
-                // Delete button for deletable messages
                 if let onDelete = onDelete {
                     Button(action: onDelete) {
                         Image(systemName: "trash.circle.fill")
@@ -39,14 +43,15 @@ struct ChatMessageView: View {
                             .foregroundColor(.red.opacity(0.7))
                     }
                 }
-                
-                Text(message.content)
+                // Ganti ke Text(attributedMessage)
+                Text(attributedMessage)
+                    .font(.body)
+                    .lineSpacing(2)
                     .padding(12)
                     .background(Color.main)
                     .foregroundColor(.white)
                     .cornerRadius(16, corners: [.topLeft, .topRight, .bottomLeft])
             }
-            
             Text(formatTime(message.timestamp))
                 .font(.caption2)
                 .foregroundColor(.secondary)
@@ -55,7 +60,6 @@ struct ChatMessageView: View {
     
     private var botMessageView: some View {
         HStack(alignment: .top, spacing: 8) {
-            // Bot avatar
             Image(systemName: "brain.head.profile")
                 .foregroundColor(.main)
                 .font(.title2)
@@ -69,10 +73,7 @@ struct ChatMessageView: View {
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundColor(.main)
-                    
                     Spacer()
-                    
-                    // Delete button for deletable messages
                     if let onDelete = onDelete {
                         Button(action: onDelete) {
                             Image(systemName: "trash.circle.fill")
@@ -81,15 +82,15 @@ struct ChatMessageView: View {
                         }
                     }
                 }
-                
-                // Format long response text better
-                Text(message.content)
+                // Ganti ke Text(attributedMessage)
+                Text(attributedMessage)
+                    .font(.body)
+                    .lineSpacing(2)
                     .padding(12)
                     .background(Color(.systemGray6))
                     .foregroundColor(.primary)
                     .cornerRadius(16, corners: [.topRight, .bottomLeft, .bottomRight])
                     .fixedSize(horizontal: false, vertical: true)
-                
                 Text(formatTime(message.timestamp))
                     .font(.caption2)
                     .foregroundColor(.secondary)

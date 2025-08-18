@@ -23,6 +23,12 @@ class NotificationViewModel: ObservableObject {
   @Published var errorMessage: String?
   @Published var unreadCount = 0
   
+  // Adaptive polling for unread count
+  private var unreadTimer: Timer?
+  private let pollingIntervals: [TimeInterval] = [15, 30, 60, 120, 300] // seconds
+  private var pollingIndex: Int = 0
+  private var lastUnreadValue: Int = 0
+  
   // Pagination properties
   @Published var currentPage = 1
   @Published var totalPages = 1
@@ -137,7 +143,14 @@ class NotificationViewModel: ObservableObject {
       )
       
       if response.success {
-        self.unreadCount = response.data.unread_count
+        let newValue = response.data.unread_count
+        // Detect change to adjust polling speed
+        if newValue != self.unreadCount {
+          self.unreadCount = newValue
+          self.lastUnreadValue = newValue
+          // Speed up polling on change
+          self.resetPollingSpeed()
+        }
       }
     } catch {
       print("Failed to fetch unread count: \(error)")
@@ -183,5 +196,47 @@ class NotificationViewModel: ObservableObject {
   // Add this missing method
   func setAutoRefreshing(_ refreshing: Bool) {
     isAutoRefreshing = refreshing
+  }
+
+  // MARK: - Adaptive polling controls
+  func startUnreadAutoRefresh() {
+    stopUnreadAutoRefresh()
+    lastUnreadValue = unreadCount
+    scheduleNextUnreadTimer(interval: pollingIntervals[pollingIndex])
+  }
+  
+  func stopUnreadAutoRefresh() {
+    unreadTimer?.invalidate()
+    unreadTimer = nil
+  }
+  
+  private func scheduleNextUnreadTimer(interval: TimeInterval) {
+    unreadTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
+      Task { @MainActor [weak self] in
+        guard let self = self else { return }
+        let before = self.unreadCount
+        await self.fetchUnreadCount()
+        let after = self.unreadCount
+        // Backoff if no change, speed up if there is
+        if after == before {
+          if self.pollingIndex < self.pollingIntervals.count - 1 {
+            self.pollingIndex += 1
+          }
+        } else {
+          self.pollingIndex = 0
+        }
+        self.scheduleNextUnreadTimer(interval: self.pollingIntervals[self.pollingIndex])
+      }
+    }
+    RunLoop.main.add(unreadTimer!, forMode: .common)
+  }
+  
+  private func resetPollingSpeed() {
+    pollingIndex = 0
+    if unreadTimer != nil {
+      // Reschedule with faster interval immediately
+      stopUnreadAutoRefresh()
+      scheduleNextUnreadTimer(interval: pollingIntervals[pollingIndex])
+    }
   }
 }

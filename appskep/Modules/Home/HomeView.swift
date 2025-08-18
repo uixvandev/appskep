@@ -9,10 +9,11 @@ import SwiftUI
 
 struct HomeView: View {
   @EnvironmentObject var authManager: AuthManager
-  @StateObject private var myClassViewModel = MyClassViewModel()
+  @EnvironmentObject var myClassViewModel: MyClassViewModel
   @StateObject private var searchViewModel = SearchViewModel()
   @StateObject private var notificationViewModel = NotificationViewModel()
   @State private var showNotifications = false
+  @Environment(\.scenePhase) private var scenePhase
   
   private let newClassesColumns: [GridItem] = [
     GridItem(.flexible(), spacing: 16),
@@ -43,10 +44,20 @@ struct HomeView: View {
         await searchViewModel.fetchUkomClasses()
         await notificationViewModel.fetchUnreadCount()
       }
-      setupUnreadCountAutoRefresh()
+      notificationViewModel.startUnreadAutoRefresh()
     }
     .onDisappear {
-      stopUnreadCountAutoRefresh()
+      notificationViewModel.stopUnreadAutoRefresh()
+    }
+    .onChange(of: scenePhase) { _, phase in
+      switch phase {
+      case .active:
+        notificationViewModel.startUnreadAutoRefresh()
+      case .background, .inactive:
+        notificationViewModel.stopUnreadAutoRefresh()
+      @unknown default:
+        break
+      }
     }
     .sheet(isPresented: $showNotifications) {
       NavigationStack {
@@ -56,26 +67,7 @@ struct HomeView: View {
     }
   }
   
-  // Add timer for unread count auto refresh
-  @State private var unreadCountTimer: Timer?
-  
-  // MARK: - Auto Refresh Functions for Unread Count
-  private func setupUnreadCountAutoRefresh() {
-    // Stop existing timer first
-    stopUnreadCountAutoRefresh()
-    
-    // Start new timer for unread count refresh every 60 seconds
-    unreadCountTimer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { _ in
-      Task {
-        await notificationViewModel.fetchUnreadCount()
-      }
-    }
-  }
-  
-  private func stopUnreadCountAutoRefresh() {
-    unreadCountTimer?.invalidate()
-    unreadCountTimer = nil
-  }
+  // Adaptive polling moved to NotificationViewModel (startUnreadAutoRefresh/stopUnreadAutoRefresh)
   
   private var headerView: some View {
     HStack {
@@ -283,4 +275,5 @@ struct EmptyMyClassesView: View {
 #Preview {
   HomeView()
     .environmentObject(AuthManager.shared)
+    .environmentObject(MyClassViewModel())
 }

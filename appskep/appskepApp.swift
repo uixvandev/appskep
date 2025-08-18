@@ -11,20 +11,22 @@ import SwiftUI
 struct appskepApp: App {
     @StateObject private var authManager = AuthManager.shared
     @StateObject private var tryOutCoordinator = TryOutCoordinator()
+    @StateObject private var myClassViewModel = MyClassViewModel()
     
     var body: some Scene {
         WindowGroup {
-            NavigationStack {
-                Group {
-                    if authManager.isAuthenticated {
-                        MainTabView()
-                    } else {
+            Group {
+                if authManager.isAuthenticated {
+                    MainTabView()
+                } else {
+                    NavigationStack {
                         LoginView()
                     }
                 }
             }
             .environmentObject(authManager)
             .environmentObject(tryOutCoordinator)
+            .environmentObject(myClassViewModel)
             .preferredColorScheme(.light)
         }
     }

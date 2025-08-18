@@ -162,6 +162,9 @@ class TransactionViewModel: ObservableObject {
     }
     
     func proceedToPayment(order: OrderItem) {
+        // Keep track of the order being paid so we can poll status later
+        selectedOrder = order
+        
         guard let urlString = order.snap_redirect_url,
               let url = URL(string: urlString) else {
             errorMessage = "URL pembayaran tidak valid"
@@ -203,11 +206,38 @@ class TransactionViewModel: ObservableObject {
     // MARK: - Payment Callback Handler
     func handlePaymentCallback(success: Bool, orderID: String? = nil) async {
         if success {
+            // If we know which order is being paid, poll until it becomes paid (handles webhook delay)
+            if let payingOrderId = selectedOrder?.id {
+                await waitUntilOrderPaid(orderId: payingOrderId, timeout: 20, interval: 2)
+            }
+            
             // Refresh orders to get updated status
             await refreshOrders()
+            
+            // Notify app to switch to MyClass tab and refresh classes
+            NotificationCenter.default.post(name: NSNotification.Name("SwitchToMyClassTab"), object: nil)
+            NotificationCenter.default.post(name: NSNotification.Name("RefreshMyClasses"), object: nil, userInfo: [
+                "orderID": orderID as Any
+            ])
         }
         
         showPaymentWebView = false
         paymentURL = nil
+    }
+    
+    // MARK: - Helpers
+    private func waitUntilOrderPaid(orderId: Int, timeout: TimeInterval, interval: TimeInterval) async {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            // Fetch order detail and check status
+            await fetchOrderDetail(id: orderId)
+            if selectedOrder?.status == .paid {
+                print("✅ Order paid confirmed: \(orderId)")
+                return
+            }
+            // Sleep for interval before next check
+            try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+        }
+        print("⌛️ Order not paid within timeout: \(orderId)")
     }
 }

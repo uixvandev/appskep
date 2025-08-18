@@ -22,16 +22,17 @@ class MyClassViewModel: ObservableObject {
     currentPage <= totalPages
   }
   
+  func resetPagination() {
+    currentPage = 1
+    totalPages = 1
+  }
+  
   func fetchMyClasses() async {
     // Prevent multiple concurrent calls
-    if isLoading || isLoadingMore {
-      return
-    }
+    if isLoading || isLoadingMore || isRefreshing { return }
     
     // Check if we have more pages for pagination
-    if currentPage > totalPages && currentPage > 1 {
-      return
-    }
+    if currentPage > totalPages && currentPage > 1 { return }
     
     if currentPage == 1 {
       isLoading = true
@@ -41,8 +42,6 @@ class MyClassViewModel: ObservableObject {
     
     errorMessage = nil
     
-    print("🔍 Fetching my classes - Page: \(currentPage)")
-    
     do {
       let response: MyOrderResponse = try await APIService.shared.performRequest(
         endpoint: .getMyOrders(page: currentPage, limit: 10),
@@ -50,41 +49,27 @@ class MyClassViewModel: ObservableObject {
         responseType: MyOrderResponse.self
       )
       
-      print("📥 API Response: success=\(response.success), total_items=\(response.data.total_items)")
-      
       if response.success {
-        let allOrders = response.data.data
-        print("📋 Total orders received: \(allOrders.count)")
-        
-        // Filter for paid classes only
-        let paidClasses = allOrders.filter { $0.status == "paid" }
-        print("💳 Paid classes: \(paidClasses.count)")
-        
+        // Keep only paid classes; exclude pending/expired/cancel/failure
+        let classes = response.data.data.filter { $0.status.lowercased() == "paid" }
         if currentPage == 1 {
-          self.myPaidClasses = paidClasses
+          self.myPaidClasses = classes
         } else {
-          self.myPaidClasses.append(contentsOf: paidClasses)
+          self.myPaidClasses.append(contentsOf: classes)
         }
-        
         self.totalPages = response.data.total_pages
         self.currentPage += 1
-        
-        print("✅ Updated classes count: \(self.myPaidClasses.count)")
-        
-        // Debug: Print each class
-        for (index, order) in self.myPaidClasses.enumerated() {
-          print("  \(index + 1). \(order.kelas.name) - Status: \(order.status)")
-        }
-        
       } else {
-        let message = response.message
-        print("❌ API Error: \(message)")
-        self.errorMessage = message
+        self.errorMessage = response.message
+      }
+    } catch let apiError as APIError {
+      if case .cancelled = apiError {
+        // Ignore silently
+      } else {
+        self.errorMessage = apiError.errorDescription
       }
     } catch {
-      let message = "Gagal memuat kelas: \(error.localizedDescription)"
-      print("🚨 Network Error: \(message)")
-      self.errorMessage = message
+      self.errorMessage = "Gagal memuat kelas: \(error.localizedDescription)"
     }
     
     isLoading = false
@@ -92,9 +77,11 @@ class MyClassViewModel: ObservableObject {
   }
   
   func refreshMyClasses() async {
+    // Prevent concurrent refresh/load calls
+    if isRefreshing || isLoading || isLoadingMore { return }
+    
     isRefreshing = true
     currentPage = 1
-    // Don't clear classes immediately - keep them until new data arrives
     
     do {
       let response: MyOrderResponse = try await APIService.shared.performRequest(
@@ -103,38 +90,44 @@ class MyClassViewModel: ObservableObject {
         responseType: MyOrderResponse.self
       )
       
-      print("🔄 Refresh API Response: success=\(response.success)")
-      
       if response.success {
-        let allOrders = response.data.data
-        let paidClasses = allOrders.filter { $0.status == "paid" }
-        
-        // Only update after successful response
-        self.myPaidClasses = paidClasses
+        // Keep only paid classes
+        let classes = response.data.data.filter { $0.status.lowercased() == "paid" }
+        self.myPaidClasses = classes
         self.totalPages = response.data.total_pages
-        self.currentPage = 2 // Next page to load
+        self.currentPage = min(2, self.totalPages + 1)
         self.errorMessage = nil
-        
-        print("🔄 Refreshed - Total classes: \(self.myPaidClasses.count)")
-        
       } else {
         self.errorMessage = response.message
-        print("❌ Refresh Error: \(response.message)")
+      }
+    } catch let apiError as APIError {
+      if case .cancelled = apiError {
+        // Ignore silently
+      } else {
+        self.errorMessage = apiError.errorDescription
       }
     } catch {
       self.errorMessage = "Gagal memuat kelas: \(error.localizedDescription)"
-      print("🚨 Refresh Network Error: \(error)")
     }
     
     isRefreshing = false
   }
   
-  func loadMoreClasses() async {
-    guard hasMorePages && !isLoadingMore && !isRefreshing else {
-      print("🛑 Load more blocked - hasMore: \(hasMorePages), isLoading: \(isLoadingMore), isRefreshing: \(isRefreshing)")
-      return
-    }
+  // Retry helper to handle backend propagation delays after payment
+  func refreshWithRetry(retries: Int = 5, delaySeconds: Double = 2.0) async {
+    await refreshMyClasses()
+    if !myPaidClasses.isEmpty { return }
     
+    var attempts = 1
+    while attempts <= retries && myPaidClasses.isEmpty {
+      try? await Task.sleep(nanoseconds: UInt64(delaySeconds * 1_000_000_000))
+      await refreshMyClasses()
+      attempts += 1
+    }
+  }
+  
+  func loadMoreClasses() async {
+    guard hasMorePages && !isLoadingMore && !isRefreshing else { return }
     await fetchMyClasses()
   }
   

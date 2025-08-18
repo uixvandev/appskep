@@ -115,6 +115,14 @@ class APIService {
     } catch is DecodingError {
       print("❌ JSON decoding error")
       throw APIError.decodingError
+    } catch let urlError as URLError {
+      if urlError.code == .cancelled {
+        print("🟡 Request cancelled (ignored)")
+        throw APIError.cancelled
+      } else {
+        print("❌ Network error: \(urlError)")
+        throw APIError.networkError
+      }
     } catch let error as APIError {
       print("❌ API Error: \(error)")
       throw error
@@ -155,6 +163,7 @@ enum APIError: Error, LocalizedError {
   case unauthorized
   case conflict(String, String?) // message, error code
   case validationError(String)
+  case cancelled
   
   var errorDescription: String? {
     switch self {
@@ -174,6 +183,8 @@ enum APIError: Error, LocalizedError {
       return message
     case .validationError(let message):
       return message
+    case .cancelled:
+      return nil
     }
   }
   

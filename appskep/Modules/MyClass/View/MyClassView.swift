@@ -8,13 +8,22 @@
 import SwiftUI
 
 struct MyClassView: View {
-  @StateObject private var viewModel = MyClassViewModel()
+  @EnvironmentObject private var viewModel: MyClassViewModel
+  @State private var needsRefreshFromPayment = false
+  @State private var isPullRefreshing = false
   
   var body: some View {
-    ZStack {
+    ZStack(alignment: .top) {
       // Background
       Color(.systemGray6)
         .ignoresSafeArea()
+      
+      // Top inline refresh indicator
+      if viewModel.isRefreshing || isPullRefreshing {
+        ProgressView()
+          .scaleEffect(0.8)
+          .padding(.top, 8)
+      }
       
       Group {
         if viewModel.isLoading && viewModel.myPaidClasses.isEmpty {
@@ -25,30 +34,31 @@ struct MyClassView: View {
             LazyVStack(spacing: 16) {
               ForEach(viewModel.myPaidClasses) { order in
                 NavigationLink(destination: MyClassDetailView(order: order)) {
-                  MyClassRowView(order: order)  // Renamed to avoid conflict
+                  MyClassRowView(order: order)
                 }
                 .buttonStyle(PlainButtonStyle())
-                .onAppear {
-                  // Load more when reaching last item
-                  if order.id == viewModel.myPaidClasses.last?.id {
-                    Task {
-                      await viewModel.loadMoreClasses()
-                    }
-                  }
-                }
               }
               
-              // Loading indicator for pagination
-              if viewModel.isLoading && !viewModel.myPaidClasses.isEmpty {
+              // Pagination footer: spinner or sentinel to load more
+              if viewModel.isLoadingMore {
                 ProgressView()
                   .frame(height: 60)
+              } else if viewModel.hasMorePages && !viewModel.isRefreshing && !viewModel.isLoading {
+                Color.clear
+                  .frame(height: 1)
+                  .onAppear {
+                    Task { await viewModel.loadMoreClasses() }
+                  }
               }
             }
             .padding(.horizontal, 20)
             .padding(.top, 16)
           }
           .refreshable {
+            guard !viewModel.isRefreshing && !viewModel.isLoading && !viewModel.isLoadingMore else { return }
+            isPullRefreshing = true
             await viewModel.refreshMyClasses()
+            isPullRefreshing = false
           }
         } else if viewModel.errorMessage != nil {
           // Error state
@@ -71,8 +81,23 @@ struct MyClassView: View {
     .navigationBarTitleDisplayMode(.large)
     .onAppear {
       Task {
-        await viewModel.fetchMyClasses()
+        // If first load
+        if viewModel.myPaidClasses.isEmpty {
+          await viewModel.fetchMyClasses()
+        }
+        // If flagged from payment, refresh
+        if needsRefreshFromPayment {
+          needsRefreshFromPayment = false
+          await viewModel.refreshMyClasses()
+        }
       }
+    }
+    .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("RefreshMyClasses"))) { _ in
+      // Debounce: set flag and let onAppear perform refresh once when visible
+      needsRefreshFromPayment = true
+    }
+    .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("RefreshMyClassesWithRetry"))) { _ in
+      Task { await viewModel.refreshWithRetry() }
     }
     .alert("Error", isPresented: .constant(viewModel.errorMessage != nil && !viewModel.myPaidClasses.isEmpty)) {
       Button("OK") {
@@ -117,6 +142,8 @@ struct MyClassRowView: View {  // Renamed from MyClassCardView
       
       // Content
       VStack(alignment: .leading, spacing: 8) {
+        Spacer(minLength: 0)
+        
         // Title
         Text(order.kelas.name)
           .font(.headline)
@@ -125,17 +152,21 @@ struct MyClassRowView: View {  // Renamed from MyClassCardView
           .lineLimit(2)
           .multilineTextAlignment(.leading)
         
-        // Description
+        // Description (limit to 1 line for consistent height)
         Text(order.kelas.description)
           .font(.subheadline)
           .foregroundColor(.secondary)
-          .lineLimit(2)
+          .lineLimit(1)
           .multilineTextAlignment(.leading)
+        
         Text("Aktif")
           .font(.caption)
           .fontWeight(.medium)
           .foregroundColor(.green)
+        
+        Spacer(minLength: 0)
       }
+      .frame(maxHeight: .infinity, alignment: .center)
       
       // Chevron
       Image(systemName: "chevron.right")
@@ -143,6 +174,7 @@ struct MyClassRowView: View {  // Renamed from MyClassCardView
         .foregroundColor(.gray)  // Fixed: Use .gray instead of .tertiary
     }
     .padding()
+    .frame(height: 120) // Fixed height for consistent row size
     .background(Color(.systemBackground))
     .cornerRadius(20)
     .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
@@ -272,5 +304,6 @@ struct ErrorStateView: View {
 #Preview {
   NavigationStack {
     MyClassView()
+      .environmentObject(MyClassViewModel())
   }
 }
