@@ -10,7 +10,7 @@ import Foundation
 // MARK: - Chat Request
 struct ChatRequest: Codable {
     let message: String
-    let soal_id: Int
+    let soal_id: Int?
 }
 
 // MARK: - Chat Response

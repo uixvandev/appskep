@@ -63,6 +63,10 @@ class TryOutViewModel: ObservableObject {
     tryOutDetail?.soals.count ?? 0
   }
   
+  var canFinishTryOut: Bool {
+    answeredQuestionsCount == totalQuestionsCount && totalQuestionsCount > 0
+  }
+  
   // MARK: - Public Methods (Actions from View)
   func startTryOut(orderId: Int, paketId: Int) async -> Bool {
       isLoading = true
@@ -193,7 +197,7 @@ class TryOutViewModel: ObservableObject {
     showFinishConfirmation = true
   }
   
-  func finishTryOut() async {
+  func finishTryOut(isAutoSubmit: Bool = false) async {
     // Try to get tryOutId from multiple sources
     let tryOutId: Int
     
@@ -206,6 +210,14 @@ class TryOutViewModel: ObservableObject {
     } else {
       errorMessage = "Try out session not found"
       print("❌ Error: Try out session not found - both session and detail are nil")
+      return
+    }
+    
+    // Validasi: Pastikan semua soal sudah dijawab sebelum submit
+    // Skip validation if this is an auto-submission (timer expired)
+    if !isAutoSubmit && answeredQuestionsCount < totalQuestionsCount {
+      errorMessage = "Harap jawab semua soal sebelum menyelesaikan try out."
+      showFinishConfirmation = false
       return
     }
     
@@ -349,7 +361,7 @@ class TryOutViewModel: ObservableObject {
     guard timeRemainingInSeconds > 0 else {
       print("⏰ Time's up! Auto-finishing try out...")
       Task {
-        await finishTryOut()
+        await finishTryOut(isAutoSubmit: true)
       }
       return
     }

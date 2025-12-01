@@ -93,7 +93,7 @@ struct TryOutResultView: View {
         .animation(.easeInOut(duration: 1.5).delay(0.2), value: result.score)
       
       VStack {
-        Text("\(result.score)")
+        Text(formatScore(result.score))
           .font(.system(size: 48, weight: .bold, design: .rounded))
           .foregroundColor(.primary)
         Text("Skor")
@@ -101,6 +101,13 @@ struct TryOutResultView: View {
           .foregroundColor(.secondary)
       }
     }
+  }
+
+  private func formatScore(_ score: Double) -> String {
+    if score.truncatingRemainder(dividingBy: 1) == 0 {
+      return "\(Int(score))"
+    }
+    return String(format: "%.1f", score)
   }
   
   private var summaryCardView: some View {
@@ -195,7 +202,7 @@ struct TryOutResultView: View {
       paket_id: 1,
       started_at: "2025-08-01 21:13:41",
       finished_at: "2025-08-01 21:43:47",
-      score: 85,
+      score: 85.0,
       paket: Paket(id: 1, name: "Try Out Appskep Part 1", description: "Test", duration: 150, totalQuestions: 4),
       soals: [],
       answers: []

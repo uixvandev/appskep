@@ -171,7 +171,7 @@ struct PembahasanView: View {
             AnswerOptionCard(
               option: option,
               index: optionChar,
-              isUserAnswer: option.id == question.user_answer.pilihan_jawaban_id,
+              isUserAnswer: option.id == question.user_answer?.pilihan_jawaban_id,
               isCorrectAnswer: option.is_correct
             )
           }
@@ -180,7 +180,7 @@ struct PembahasanView: View {
         // User's answer status
         UserAnswerStatusCard(
           isCorrect: question.is_user_correct,
-          userAnswerText: question.user_answer.option_text
+          userAnswerText: question.user_answer?.option_text ?? "Tidak dijawab"
         )
         
         // Explanation section

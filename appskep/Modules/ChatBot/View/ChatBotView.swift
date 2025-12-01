@@ -121,8 +121,10 @@ struct ChatBotView: View {
                 }
                 .onChange(of: viewModel.messages.count) { _, _ in
                     if let lastMessage = viewModel.messages.last {
-                        withAnimation(.easeInOut(duration: 0.5)) {
-                            proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                        DispatchQueue.main.async {
+                            withAnimation(.easeOut(duration: 0.3)) {
+                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                            }
                         }
                     }
                 }
@@ -133,6 +135,7 @@ struct ChatBotView: View {
         }
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
+        .background(Color(.systemBackground).ignoresSafeArea())
         .onAppear {
             Task {
                 await viewModel.loadChatHistory(soalId: question.soal_id)
@@ -157,11 +160,7 @@ struct ChatBotView: View {
     
     private var headerView: some View {
         VStack(spacing: 12) {
-            // Status bar area padding
-            Rectangle()
-                .fill(Color.clear)
-                .frame(height: getSafeAreaTop())
-            
+
             HStack {
                 Button(action: { dismiss() }) {
                     Image(systemName: "chevron.left")
@@ -279,10 +278,6 @@ struct ChatBotView: View {
             .padding()
             .background(Color(.systemBackground))
             
-            // Bottom safe area padding
-            Rectangle()
-                .fill(Color(.systemBackground))
-                .frame(height: getSafeAreaBottom())
         }
     }
     
@@ -291,28 +286,20 @@ struct ChatBotView: View {
         guard !message.isEmpty else { return }
         
         messageText = ""
-        isTextFieldFocused = false
+        messageText = ""
+        // isTextFieldFocused = false // Keep keyboard open for better UX and performance
         
         Task {
-            await viewModel.sendMessage(message, soalId: question.soal_id)
+            // Give UI time to update (clear text, dismiss keyboard) before processing message
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s
+            
+            let omit = viewModel.shouldOmitSoalId(for: message)
+            let passingSoalId: Int? = omit ? nil : question.soal_id
+            await viewModel.sendMessage(message, soalId: passingSoalId)
         }
     }
     
-    private func getSafeAreaTop() -> CGFloat {
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let window = windowScene.windows.first else {
-            return 44
-        }
-        return window.safeAreaInsets.top
-    }
-    
-    private func getSafeAreaBottom() -> CGFloat {
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let window = windowScene.windows.first else {
-            return 34
-        }
-        return window.safeAreaInsets.bottom
-    }
+
 }
 
 #Preview {

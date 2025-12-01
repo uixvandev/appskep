@@ -108,6 +108,14 @@ struct TryOutInfoSheet: View {
             }
         }
     }
+
+    // MARK: - Formatting Helpers
+    private func formatScore(_ score: Double) -> String {
+        if score.truncatingRemainder(dividingBy: 1) == 0 {
+            return "\(Int(score))"
+        }
+        return String(format: "%.1f", score)
+    }
     
     // MARK: - Helper Methods for Layout
     
@@ -267,7 +275,7 @@ struct TryOutInfoSheet: View {
                                 .frame(width: 80, height: 80)
                                 .rotationEffect(.degrees(-90))
                             
-                            Text("\(retryData.best_score ?? 0)")
+                            Text(formatScore(retryData.best_score ?? 0))
                                 .font(.title3)
                                 .fontWeight(.bold)
                         }
@@ -403,7 +411,7 @@ struct TryOutInfoSheet: View {
                     
                     ActionButton(
                         title: "Lihat Hasil Detail",
-                        subtitle: "Skor: \(retryData.best_score ?? 0)",
+                        subtitle: "Skor: \(formatScore(retryData.best_score ?? 0))",
                         icon: "chart.bar.fill",
                         color: .blue,
                         isLoading: false
@@ -425,7 +433,7 @@ struct TryOutInfoSheet: View {
                             .font(.headline)
                             .fontWeight(.bold)
                         
-                        Text("Skor terbaik: \(bestScore)")
+                        Text("Skor terbaik: \(formatScore(bestScore))")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -873,6 +881,13 @@ struct TryOutResultDetailSheet: View {
         mockTotalQuestions - mockCorrectAnswers
     }
     private var mockDuration: String { "45 Menit" }
+
+    private func formatScore(_ score: Double) -> String {
+        if score.truncatingRemainder(dividingBy: 1) == 0 {
+            return "\(Int(score))"
+        }
+        return String(format: "%.1f", score)
+    }
     
     var body: some View {
         NavigationStack {
@@ -946,7 +961,7 @@ struct TryOutResultDetailSheet: View {
                 .animation(.easeInOut(duration: 1.5).delay(0.2), value: attempt.score)
             
             VStack {
-                Text("\(attempt.score)")
+                Text(formatScore(attempt.score))
                     .font(.system(size: 48, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                 

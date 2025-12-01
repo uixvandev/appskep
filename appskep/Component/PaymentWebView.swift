@@ -117,6 +117,49 @@ struct WebViewRepresentable: UIViewRepresentable {
             self.parent = parent
         }
         
+        func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+            guard let url = navigationAction.request.url else {
+                decisionHandler(.allow)
+                return
+            }
+
+            // Intercept custom scheme deep link (e.g., appskep://payment-callback?...)
+            if handleCustomPaymentCallback(url) {
+                // Prevent WebView from navigating to the custom scheme
+                decisionHandler(.cancel)
+                return
+            }
+
+            decisionHandler(.allow)
+        }
+        
+        private func handleCustomPaymentCallback(_ url: URL) -> Bool {
+            guard let scheme = url.scheme?.lowercased(), scheme == "appskep" else {
+                return false
+            }
+
+            // Expecting URL like: appskep://payment-callback?status=success&order_id=123
+            let host = url.host?.lowercased()
+            if host == "payment-callback" {
+                let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+                let status = components?.queryItems?.first(where: { $0.name == "status" })?.value?.lowercased()
+                let orderID = components?.queryItems?.first(where: { $0.name == "order_id" })?.value
+
+                switch status {
+                case "success", "settlement", "capture", "pending":
+                    parent.onPaymentComplete(true, orderID)
+                case "cancel", "deny", "expire", "failure":
+                    parent.onPaymentComplete(false, orderID)
+                default:
+                    // Unknown status: treat as failure to be safe
+                    parent.onPaymentComplete(false, orderID)
+                }
+                return true
+            }
+
+            return false
+        }
+        
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             parent.isLoading = true
         }

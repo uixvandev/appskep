@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct RegisterView: View {
     @StateObject private var viewModel = RegisterViewModel()
@@ -36,8 +37,9 @@ struct RegisterView: View {
     private var headerSection: some View {
         Image("IconRegister")
             .resizable()
-            .aspectRatio(contentMode: .fill)
+            .scaledToFit()
             .frame(width: 86, height: 86)
+            .clipped()
             .frame(maxWidth: .infinity, alignment: .leading)
             .transition(.opacity.combined(with: .offset(y: -20)))
             .opacity(startExitAnimation ? 0 : 1)
@@ -80,7 +82,8 @@ struct RegisterView: View {
                 text: $viewModel.password,
                 placeholder: "Password",
                 fieldType: .secure,
-                validation: { $0.count < 6 ? "Minimal 6 karakter" : nil }
+                validation: { $0.count < 6 ? "Minimal 6 karakter" : nil },
+                textContentType: .newPassword
             )
 
             OutlineTextField(
@@ -91,7 +94,8 @@ struct RegisterView: View {
                     if $0.isEmpty { return "Konfirmasi password tidak boleh kosong" }
                     if $0 != viewModel.password { return "Password tidak sama" }
                     return nil
-                }
+                },
+                textContentType: .newPassword
             )
         }
         .opacity(startExitAnimation ? 0 : 1)

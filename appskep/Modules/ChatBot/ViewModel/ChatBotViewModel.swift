@@ -27,6 +27,40 @@ class ChatBotViewModel: ObservableObject {
     private var currentSoalId: Int?
     private var hasLoadedHistory = false
     
+    // MARK: - Simple intent detection for small talk
+    private enum SmallTalkType { case greeting, thanks, ack }
+    
+    private static let dateFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+    
+    private func detectSmallTalk(in text: String) -> SmallTalkType? {
+        let lower = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        // Greetings
+        let greetings = ["halo", "hai", "hi", "hello", "assalamualaikum", "selamat pagi", "selamat siang", "selamat sore", "malam"]
+        if greetings.contains(where: { lower.hasPrefix($0) || lower == $0 }) {
+            return .greeting
+        }
+        // Thanks
+        let thanks = ["terima kasih", "trimakasih", "makasih", "thanks", "thank you", "tengkyu"]
+        if thanks.contains(where: { lower.contains($0) || lower == $0 }) {
+            return .thanks
+        }
+        // Acknowledgements / short confirms
+        let acks = ["ok", "oke", "okey", "sip", "siap", "noted", "mantap", "baik"]
+        if acks.contains(where: { lower == $0 }) {
+            return .ack
+        }
+        return nil
+    }
+    
+    // Public helper so View can decide to omit soalId
+    func shouldOmitSoalId(for text: String) -> Bool {
+        return detectSmallTalk(in: text) != nil
+    }
+    
     func loadChatHistory(soalId: Int) async {
         guard !hasLoadedHistory else { return }
         
@@ -71,7 +105,7 @@ class ChatBotViewModel: ObservableObject {
         isLoadingHistory = false
     }
     
-    func sendMessage(_ message: String, soalId: Int) async {
+    func sendMessage(_ message: String, soalId: Int? = nil) async {
         // Add user message
         let userMessage = ChatMessage(
             id: Int(Date().timeIntervalSince1970 * 1000), // Unique timestamp-based ID
@@ -81,6 +115,28 @@ class ChatBotViewModel: ObservableObject {
             originalHistoryId: nil // New messages don't have history ID yet
         )
         messages.append(userMessage)
+        
+        // If it's small talk and no specific soal context is provided, reply locally to avoid long, off-topic responses
+        if soalId == nil, let smallTalk = detectSmallTalk(in: message) {
+            let reply: String
+            switch smallTalk {
+            case .greeting:
+                reply = "Halo! Ada yang bisa saya bantu?"
+            case .thanks:
+                reply = "Sama-sama! Senang bisa membantu."
+            case .ack:
+                reply = "Siap. Jika ada pertanyaan lain, kabari ya!"
+            }
+            let botMessage = ChatMessage(
+                id: Int(Date().timeIntervalSince1970 * 1000) + 1,
+                content: reply,
+                isUser: false,
+                timestamp: Date(),
+                originalHistoryId: nil
+            )
+            messages.append(botMessage)
+            return
+        }
         
         isLoading = true
         errorMessage = nil
@@ -211,9 +267,7 @@ class ChatBotViewModel: ObservableObject {
     }
     
     private func parseDate(_ dateString: String) -> Date? {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter.date(from: dateString)
+        return Self.dateFormatter.date(from: dateString)
     }
     
     // Keep old clearHistory for UI-only clearing if needed

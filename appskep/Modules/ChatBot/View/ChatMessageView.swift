@@ -98,16 +98,24 @@ struct ChatMessageView: View {
         }
     }
     
-    private func formatTime(_ date: Date) -> String {
+    private static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        
+        formatter.timeStyle = .short
+        return formatter
+    }()
+    
+    private static let dateTimeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter
+    }()
+    
+    private func formatTime(_ date: Date) -> String {
         if Calendar.current.isDateInToday(date) {
-            formatter.timeStyle = .short
-            return formatter.string(from: date)
+            return Self.timeFormatter.string(from: date)
         } else {
-            formatter.dateStyle = .short
-            formatter.timeStyle = .short
-            return formatter.string(from: date)
+            return Self.dateTimeFormatter.string(from: date)
         }
     }
 }

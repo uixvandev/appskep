@@ -107,6 +107,13 @@ struct MainTabView: View {
             // Also nudge MyClassView to refresh with retry in case of backend delay
             NotificationCenter.default.post(name: NSNotification.Name("RefreshMyClassesWithRetry"), object: nil)
         }
+        // Ensure MyClass refreshes when user manually switches to the tab
+        .onChange(of: selectedIndex) { _, newIndex in
+            if newIndex == 2 {
+                // Use retry to handle propagation delay after recent purchase
+                NotificationCenter.default.post(name: NSNotification.Name("RefreshMyClassesWithRetry"), object: nil)
+            }
+        }
     }
 }
 

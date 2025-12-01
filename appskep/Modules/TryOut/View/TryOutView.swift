@@ -265,10 +265,15 @@ struct TryOutView: View {
           Text(viewModel.isLastSoal ? "Selesai" : "Selanjutnya ›")
             .padding()
             .frame(maxWidth: .infinity)
-            .background(Color.main)
-            .foregroundColor(.white)
+            .background(
+              viewModel.isLastSoal ? (viewModel.canFinishTryOut ? Color.main : Color(.systemGray4)) : Color.main
+            )
+            .foregroundColor(
+              viewModel.isLastSoal ? (viewModel.canFinishTryOut ? .white : Color.white.opacity(0.8)) : .white
+            )
             .cornerRadius(12)
         }
+        .disabled(viewModel.isLastSoal ? !viewModel.canFinishTryOut : false)
       }
       .padding()
       

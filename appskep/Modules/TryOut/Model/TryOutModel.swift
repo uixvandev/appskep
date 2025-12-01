@@ -92,7 +92,7 @@ struct TryOutResult: Codable {
   let paket_id: Int
   let started_at: String
   let finished_at: String
-  let score: Int
+  let score: Double
   let paket: Paket
   let soals: [Soal]
   let answers: [TryOutAnswer]
@@ -137,7 +137,7 @@ struct TryOutResultsData: Codable {
   let correct_answers: Int
   let wrong_answers: Int
   let unanswered: Int
-  let score: Int
+  let score: Double
   let percentage: Int
   let grade: String
   let started_at: String
@@ -163,7 +163,7 @@ struct PembahasanData: Codable {
 struct PembahasanQuestion: Codable, Identifiable {
   let soal_id: Int
   let question: String
-  let user_answer: UserAnswer
+  let user_answer: UserAnswer?
   let correct_answer: CorrectAnswer
   let all_options: [PembahasanOption]
   let explanation: String
@@ -216,7 +216,7 @@ struct TryOutHistoryItem: Codable, Identifiable {
     let paket_id: Int
     let started_at: String
     let finished_at: String?
-    let score: Int?
+    let score: Double?
     let paket: Paket
     
     enum CodingKeys: String, CodingKey {
@@ -235,7 +235,7 @@ struct TryOutHistoryItem: Codable, Identifiable {
         finished_at = try container.decodeIfPresent(String.self, forKey: .finished_at)
         
         // Handle nullable score
-        score = try container.decodeIfPresent(Int.self, forKey: .score)
+        score = try container.decodeIfPresent(Double.self, forKey: .score)
         
         paket = try container.decode(Paket.self, forKey: .paket)
     }
@@ -255,7 +255,7 @@ struct RetryEligibilityData: Codable {
   let total_attempts: Int
   let max_attempts: Int
   let can_retry: Bool
-  let best_score: Int?
+  let best_score: Double?
   let has_passed: Bool
   
   // Optional fields that may not be in API response
@@ -289,7 +289,7 @@ struct RetryEligibilityData: Codable {
     has_passed = try container.decode(Bool.self, forKey: .has_passed)
     
     // Handle best_score (can be 0 or null)
-    best_score = try container.decodeIfPresent(Int.self, forKey: .best_score)
+    best_score = try container.decodeIfPresent(Double.self, forKey: .best_score)
     
     // Optional fields with fallback logic
     can_start_new = try container.decodeIfPresent(Bool.self, forKey: .can_start_new)
@@ -339,7 +339,7 @@ struct RetryEligibilityData: Codable {
 // MARK: - Supporting Types (Single definition only)
 struct LastAttemptInfo: Codable, Identifiable {
   let id: Int
-  let score: Int
+  let score: Double
   let passed: Bool
   let finished_at: String
   let status: String
@@ -350,7 +350,7 @@ enum TryOutActionState {
   case loading
   case canStart
   case showResult(LastAttemptInfo)
-  case maxAttemptsReached(bestScore: Int)
+  case maxAttemptsReached(bestScore: Double)
   case waitingRetry(nextRetryDate: Date)
   case error(String)
   

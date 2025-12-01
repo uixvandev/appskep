@@ -120,7 +120,7 @@ struct TryOutHistoryRow: View {
             // Tampilkan skor jika ada
             VStack(alignment: .trailing) {
                 if let score = item.score {
-                    Text("\(score)")
+                    Text(formatScore(score))
                         .font(.title2)
                         .fontWeight(.bold)
                         .foregroundColor(.main)
@@ -154,6 +154,13 @@ struct TryOutHistoryRow: View {
             return formatter.string(from: date)
         }
         return "N/A"
+    }
+
+    private func formatScore(_ score: Double) -> String {
+        if score.truncatingRemainder(dividingBy: 1) == 0 {
+            return "\(Int(score))"
+        }
+        return String(format: "%.1f", score)
     }
 }
 

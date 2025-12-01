@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct OutlineTextField: View {
     enum FieldType {
@@ -16,6 +17,7 @@ struct OutlineTextField: View {
     var placeholder: String
     var fieldType: FieldType = .text
     var validation: ((String) -> String?)? = nil
+    var textContentType: UITextContentType? = nil
 
     @FocusState private var isFocused: Bool
     @State private var error: String?
@@ -54,8 +56,10 @@ struct OutlineTextField: View {
         switch fieldType {
         case .text:
             TextField(placeholder, text: $text)
+                .applyTextContentType(textContentType)
         case .secure:
             SecureField(placeholder, text: $text)
+                .applyTextContentType(textContentType)
         }
     }
 
@@ -67,6 +71,18 @@ struct OutlineTextField: View {
     private func validate() {
         if let validation {
             error = validation(text)
+        }
+    }
+}
+
+// MARK: - Helpers
+extension View {
+    @ViewBuilder
+    func applyTextContentType(_ type: UITextContentType?) -> some View {
+        if let type {
+            self.textContentType(type)
+        } else {
+            self
         }
     }
 }
