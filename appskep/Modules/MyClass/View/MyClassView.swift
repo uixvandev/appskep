@@ -167,14 +167,14 @@ struct MyClassRowView: View {  // Renamed from MyClassCardView
         Spacer(minLength: 0)
       }
       .frame(maxHeight: .infinity, alignment: .center)
-      
+      Spacer()
       // Chevron
       Image(systemName: "chevron.right")
         .font(.system(size: 14, weight: .medium))
         .foregroundColor(.gray)  // Fixed: Use .gray instead of .tertiary
     }
     .padding()
-    .frame(height: 120) // Fixed height for consistent row size
+    .frame(maxWidth: .infinity, minHeight: 120, alignment: .center)
     .background(Color(.systemBackground))
     .cornerRadius(20)
     .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)

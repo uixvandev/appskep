@@ -27,14 +27,6 @@ struct ChangePasswordView: View {
         }
         .navigationTitle("Keamanan & Kata Sandi")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button("Kembali") {
-                    dismiss()
-                }
-                .foregroundColor(.main)
-            }
-        }
         .background(Color(.systemGray6).ignoresSafeArea())
         .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
             Button("OK") {
