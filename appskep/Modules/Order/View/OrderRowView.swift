@@ -97,8 +97,7 @@ struct OrderRowView: View {
                 Task {
                     let hasAccess = await viewModel.checkClassAccess(kelasId: order.kelas_id)
                     if hasAccess {
-                        // Handle navigation to MyClassDetailView
-                        print("Navigate to class: \(order.kelas.name)")
+                        viewModel.openClass(order: order)
                     }
                 }
             }) {

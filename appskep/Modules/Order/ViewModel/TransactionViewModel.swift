@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import UserNotifications
 
 @MainActor
 class TransactionViewModel: ObservableObject {
@@ -154,6 +155,26 @@ class TransactionViewModel: ObservableObject {
             return false
         }
     }
+
+    func fetchKelasDetail(kelasId: Int) async -> UkomClass? {
+        do {
+            let response: UkomClassDetailResponse = try await APIService.shared.performRequest(
+                endpoint: .getKelasDetail(id: kelasId),
+                method: .GET,
+                responseType: UkomClassDetailResponse.self
+            )
+
+            if response.success {
+                return response.data
+            }
+
+            errorMessage = response.message
+            return nil
+        } catch {
+            errorMessage = "Gagal memuat detail kelas: \(error.localizedDescription)"
+            return nil
+        }
+    }
     
     // MARK: - UI Actions
     func showOrderDetailSheet(order: OrderItem) {
@@ -173,6 +194,16 @@ class TransactionViewModel: ObservableObject {
         
         paymentURL = url
         showPaymentWebView = true
+    }
+
+    func openClass(order: OrderItem) {
+        NotificationCenter.default.post(name: NSNotification.Name("SwitchToMyClassTab"), object: nil)
+        NotificationCenter.default.post(
+            name: NSNotification.Name("OpenMyClassDetail"),
+            object: nil,
+            userInfo: ["orderId": order.id, "kelasId": order.kelas_id]
+        )
+        NotificationCenter.default.post(name: NSNotification.Name("RefreshMyClassesWithRetry"), object: nil)
     }
     
     func retryOrder(order: OrderItem) {
@@ -205,10 +236,19 @@ class TransactionViewModel: ObservableObject {
     
     // MARK: - Payment Callback Handler
     func handlePaymentCallback(success: Bool, orderID: String? = nil) async {
+        print("💳 handlePaymentCallback: success=\(success) orderID=\(orderID ?? "nil")")
         if success {
-            // If we know which order is being paid, poll until it becomes paid (handles webhook delay)
-            if let payingOrderId = selectedOrder?.id {
-                await waitUntilOrderPaid(orderId: payingOrderId, timeout: 20, interval: 2)
+            let resolvedOrderId = Int(orderID ?? "") ?? selectedOrder?.id
+
+            if let payingOrderId = resolvedOrderId {
+                let isPaid = await waitUntilOrderPaid(orderId: payingOrderId, timeout: 60, interval: 3)
+                if isPaid, let order = selectedOrder {
+                    await handlePaymentSuccess(for: order)
+                } else {
+                    print("⚠️ Payment success callback but status not paid yet for order: \(payingOrderId)")
+                }
+            } else {
+                print("⚠️ Payment success callback without order id")
             }
             
             // Refresh orders to get updated status
@@ -224,20 +264,99 @@ class TransactionViewModel: ObservableObject {
         showPaymentWebView = false
         paymentURL = nil
     }
+
+    func verifyPaymentStatusAfterDismiss() async {
+        guard let orderId = selectedOrder?.id else { return }
+        print("💳 verifyPaymentStatusAfterDismiss for order: \(orderId)")
+
+        let isPaid = await waitUntilOrderPaid(orderId: orderId, timeout: 30, interval: 3)
+        if isPaid, let order = selectedOrder {
+            await handlePaymentSuccess(for: order)
+        } else {
+            print("⚠️ Order not paid after dismiss: \(orderId)")
+        }
+    }
+
+    private func handlePaymentSuccess(for order: OrderItem) async {
+        await schedulePaymentSuccessNotification(for: order)
+
+        // Refresh orders to get updated status
+        await refreshOrders()
+
+        // Notify app to switch to MyClass tab and refresh classes
+        NotificationCenter.default.post(name: NSNotification.Name("SwitchToMyClassTab"), object: nil)
+        NotificationCenter.default.post(name: NSNotification.Name("RefreshMyClasses"), object: nil, userInfo: [
+            "orderID": order.id
+        ])
+    }
+
+    // MARK: - Local Notifications
+    private func schedulePaymentSuccessNotification(for order: OrderItem) async {
+        let hasPermission = await requestNotificationAuthorizationIfNeeded()
+        guard hasPermission else {
+            print("❌ Notification permission not granted")
+            return
+        }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Pembelian Berhasil"
+        content.body = "Kelas \(order.kelas.name) sudah aktif. Selamat belajar!"
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: "payment-success-\(order.id)",
+            content: content,
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        )
+
+        do {
+            try await UNUserNotificationCenter.current().add(request)
+            print("✅ Scheduled payment success notification for order: \(order.id)")
+        } catch {
+            print("❌ Failed to schedule notification: \(error.localizedDescription)")
+        }
+    }
+
+    private func requestNotificationAuthorizationIfNeeded() async -> Bool {
+        let center = UNUserNotificationCenter.current()
+        let settings = await withCheckedContinuation { continuation in
+            center.getNotificationSettings { currentSettings in
+                continuation.resume(returning: currentSettings)
+            }
+        }
+
+        print("🔔 Notification status: \(settings.authorizationStatus.rawValue)")
+
+        switch settings.authorizationStatus {
+        case .authorized, .provisional, .ephemeral:
+            return true
+        case .notDetermined:
+            return await withCheckedContinuation { continuation in
+                center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+                    continuation.resume(returning: granted)
+                }
+            }
+        case .denied:
+            return false
+        @unknown default:
+            return false
+        }
+    }
     
     // MARK: - Helpers
-    private func waitUntilOrderPaid(orderId: Int, timeout: TimeInterval, interval: TimeInterval) async {
+    private func waitUntilOrderPaid(orderId: Int, timeout: TimeInterval, interval: TimeInterval) async -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
             // Fetch order detail and check status
             await fetchOrderDetail(id: orderId)
             if selectedOrder?.status == .paid {
                 print("✅ Order paid confirmed: \(orderId)")
-                return
+                return true
             }
             // Sleep for interval before next check
             try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
         }
         print("⌛️ Order not paid within timeout: \(orderId)")
+        return false
     }
 }

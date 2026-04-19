@@ -10,7 +10,7 @@ import Foundation
 // MARK: - Start TryOut
 struct StartTryOutRequest: Codable {
   let order_id: Int
-  let paket_id: Int
+  let kelas_paket_id: Int
 }
 
 struct StartTryOutResponse: Codable {
@@ -23,10 +23,47 @@ struct StartTryOutResponse: Codable {
 struct TryOutSessionData: Codable {
   let id: Int
   let order_id: Int
-  let paket_id: Int
+  let kelas_paket_id: Int
+  let paket_id: Int?
   let started_at: String
   let status: String
   let paket_name: String
+
+  enum CodingKeys: String, CodingKey {
+    case id, order_id, kelas_paket_id, paket_id, started_at, status, paket_name
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+
+    id = try container.decode(Int.self, forKey: .id)
+    order_id = try container.decode(Int.self, forKey: .order_id)
+    paket_id = try container.decodeIfPresent(Int.self, forKey: .paket_id)
+    started_at = try container.decode(String.self, forKey: .started_at)
+    status = try container.decode(String.self, forKey: .status)
+    paket_name = try container.decode(String.self, forKey: .paket_name)
+
+    if let kelasPaketId = try container.decodeIfPresent(Int.self, forKey: .kelas_paket_id) {
+      kelas_paket_id = kelasPaketId
+    } else if let paketId = paket_id {
+      kelas_paket_id = paketId
+    } else {
+      throw DecodingError.keyNotFound(
+        CodingKeys.kelas_paket_id,
+        DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Missing kelas_paket_id and paket_id")
+      )
+    }
+  }
+
+  init(id: Int, order_id: Int, kelas_paket_id: Int, paket_id: Int? = nil, started_at: String, status: String, paket_name: String) {
+    self.id = id
+    self.order_id = order_id
+    self.kelas_paket_id = kelas_paket_id
+    self.paket_id = paket_id
+    self.started_at = started_at
+    self.status = status
+    self.paket_name = paket_name
+  }
 }
 
 // MARK: - TryOut Detail
@@ -38,6 +75,7 @@ struct TryOutDetailResponse: Codable {
 
 struct TryOutDetail: Codable, Identifiable, Equatable {
   let id: Int
+  let kelas_paket_id: Int?
   let paket: Paket
   let soals: [Soal]
 }
@@ -214,13 +252,14 @@ struct TryOutHistoryItem: Codable, Identifiable {
     let id: Int
     let order_id: Int
     let paket_id: Int
+  let kelas_paket_id: Int?
     let started_at: String
     let finished_at: String?
     let score: Double?
     let paket: Paket
     
     enum CodingKeys: String, CodingKey {
-        case id, order_id, paket_id, started_at, finished_at, score, paket
+      case id, order_id, paket_id, kelas_paket_id, started_at, finished_at, score, paket
     }
     
     init(from decoder: Decoder) throws {
@@ -229,6 +268,7 @@ struct TryOutHistoryItem: Codable, Identifiable {
         id = try container.decode(Int.self, forKey: .id)
         order_id = try container.decode(Int.self, forKey: .order_id)
         paket_id = try container.decode(Int.self, forKey: .paket_id)
+        kelas_paket_id = try container.decodeIfPresent(Int.self, forKey: .kelas_paket_id)
         started_at = try container.decode(String.self, forKey: .started_at)
         
         // Handle nullable finished_at

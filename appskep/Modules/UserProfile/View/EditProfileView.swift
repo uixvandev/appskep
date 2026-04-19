@@ -99,11 +99,15 @@ struct EditProfileView: View {
       )
       
       ProfileTextField(
-        title: "Gender",
+        title: "Jenis kelamin",
         text: $viewModel.gender,
-        placeholder: "Pilih Gender",
+        placeholder: "Pilih jenis kelamin",
         isPickerField: true,
-        pickerOptions: ["male", "female"]  // Use API values
+        pickerOptions: ["male", "female"],  // API values
+        pickerDisplayMap: [
+          "male": "Laki-laki",
+          "female": "Perempuan"
+        ]
       )
       
       ProfileDateField(
@@ -142,13 +146,6 @@ struct EditProfileView: View {
         placeholder: "Nama Provinsi"
       )
       
-      // Role field (usually readonly for users)
-      ProfileTextField(
-        title: "Role",
-        text: $viewModel.role,
-        placeholder: "mahasiswa",
-        isDisabled: true  // Usually users can't change their role
-      )
     }
   }
 }
@@ -163,6 +160,7 @@ struct ProfileTextField: View {
   var keyboardType: UIKeyboardType = .default
   var isPickerField: Bool = false
   var pickerOptions: [String] = []
+  var pickerDisplayMap: [String: String] = [:]
   
   @State private var showPicker = false
   
@@ -188,7 +186,7 @@ struct ProfileTextField: View {
           showPicker = true
         }) {
           HStack {
-            Text(text.isEmpty ? placeholder : text)
+            Text(text.isEmpty ? placeholder : (pickerDisplayMap[text] ?? text))
               .foregroundColor(text.isEmpty ? .secondary : .primary)
             Spacer()
             Image(systemName: "chevron.down")
@@ -205,7 +203,7 @@ struct ProfileTextField: View {
         .disabled(isDisabled)
         .confirmationDialog("Pilih \(title)", isPresented: $showPicker) {
           ForEach(pickerOptions, id: \.self) { option in
-            Button(option) {
+            Button(pickerDisplayMap[option] ?? option) {
               text = option
             }
           }

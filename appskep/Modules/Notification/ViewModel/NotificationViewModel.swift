@@ -14,6 +14,7 @@
 
 import Foundation
 import UIKit
+import UserNotifications
 
 @MainActor
 class NotificationViewModel: ObservableObject {
@@ -35,6 +36,7 @@ class NotificationViewModel: ObservableObject {
   
   // Track last refresh time
   private var lastRefreshTime: Date?
+  private let lastNotifiedPaymentIdKey = "lastNotifiedPaymentNotificationId"
   
   func fetchNotifications() async {
     guard currentPage <= totalPages, !isLoading else { return }
@@ -45,7 +47,7 @@ class NotificationViewModel: ObservableObject {
     do {
       let response: NotificationResponse = try await APIService.shared.performRequest(
         endpoint: .getNotifications(page: currentPage, limit: 20),
-        method: .GET,
+        method: .GET, 
         responseType: NotificationResponse.self
       )
       
@@ -59,6 +61,7 @@ class NotificationViewModel: ObservableObject {
         self.unreadCount = response.data.unread_count
         self.currentPage += 1
         self.lastRefreshTime = Date()
+        await handlePaymentNotificationsIfNeeded(from: response.data.notifications)
       } else {
         self.errorMessage = response.message
       }
@@ -115,6 +118,7 @@ class NotificationViewModel: ObservableObject {
           self.notifications = newNotifications
           self.unreadCount = newUnreadCount
           self.lastRefreshTime = Date()
+          await handlePaymentNotificationsIfNeeded(from: newNotifications)
           
           // Show brief animation or haptic feedback for new notifications
           if hasNewNotifications {
@@ -132,6 +136,75 @@ class NotificationViewModel: ObservableObject {
     }
     
     isAutoRefreshing = false
+  }
+
+  private func handlePaymentNotificationsIfNeeded(from items: [NotificationItem]) async {
+    guard !items.isEmpty else { return }
+
+    let lastNotifiedId = UserDefaults.standard.integer(forKey: lastNotifiedPaymentIdKey)
+    let candidates = items
+      .filter { $0.id > lastNotifiedId }
+      .filter { $0.order_details.status.lowercased() == "paid" }
+      .filter { $0.title.localizedCaseInsensitiveContains("pembayaran") }
+
+    guard !candidates.isEmpty else { return }
+
+    let hasPermission = await requestNotificationAuthorizationIfNeeded()
+    guard hasPermission else {
+      print("❌ Notification permission not granted")
+      return
+    }
+
+    let sortedCandidates = candidates.sorted { $0.id < $1.id }
+    for item in sortedCandidates {
+      let content = UNMutableNotificationContent()
+      content.title = item.title
+      content.body = item.description
+      content.sound = .default
+
+      let request = UNNotificationRequest(
+        identifier: "payment-notification-\(item.id)",
+        content: content,
+        trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+      )
+
+      do {
+        try await UNUserNotificationCenter.current().add(request)
+        print("✅ Scheduled payment notification from API id: \(item.id)")
+      } catch {
+        print("❌ Failed to schedule API notification: \(error.localizedDescription)")
+      }
+    }
+
+    if let maxId = sortedCandidates.last?.id {
+      UserDefaults.standard.set(maxId, forKey: lastNotifiedPaymentIdKey)
+    }
+  }
+
+  private func requestNotificationAuthorizationIfNeeded() async -> Bool {
+    let center = UNUserNotificationCenter.current()
+    let settings = await withCheckedContinuation { continuation in
+      center.getNotificationSettings { currentSettings in
+        continuation.resume(returning: currentSettings)
+      }
+    }
+
+    print("🔔 Notification status: \(settings.authorizationStatus.rawValue)")
+
+    switch settings.authorizationStatus {
+    case .authorized, .provisional, .ephemeral:
+      return true
+    case .notDetermined:
+      return await withCheckedContinuation { continuation in
+        center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+          continuation.resume(returning: granted)
+        }
+      }
+    case .denied:
+      return false
+    @unknown default:
+      return false
+    }
   }
   
   func fetchUnreadCount() async {

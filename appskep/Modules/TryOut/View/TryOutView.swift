@@ -4,6 +4,8 @@ struct TryOutView: View {
   let tryOutId: Int
   @StateObject private var viewModel = TryOutViewModel()
   @EnvironmentObject private var tryOutCoordinator: TryOutCoordinator
+  @State private var showDoubtFinishAlert = false
+  @State private var showDoubtRequiresAnswerAlert = false
   
   var body: some View {
     VStack {
@@ -67,6 +69,7 @@ struct TryOutView: View {
         TryOutOverviewSheet(
           totalSoal: detail.soals.count,
           answeredSoalIds: Set(viewModel.selectedAnswers.keys),
+          doubtSoalIds: viewModel.doubtSoalIds,
           soals: detail.soals,
           currentSoalIndex: $viewModel.currentSoalIndex
         )
@@ -84,6 +87,16 @@ struct TryOutView: View {
       }
     } message: {
       Text("Anda telah menjawab \(viewModel.answeredQuestionsCount) dari \(viewModel.totalQuestionsCount) soal. Apakah Anda yakin ingin menyelesaikan try out?")
+    }
+    .confirmationDialog("Masih ada yang ditandai ragu", isPresented: $showDoubtFinishAlert, titleVisibility: .visible) {
+      Button("OK", role: .cancel) {}
+    } message: {
+      Text("Hapus tanda ragu untuk bisa menyelesaikan try out.")
+    }
+    .confirmationDialog("Pilih jawaban dulu", isPresented: $showDoubtRequiresAnswerAlert, titleVisibility: .visible) {
+      Button("OK", role: .cancel) {}
+    } message: {
+      Text("Anda harus memilih jawaban sebelum menandai ragu.")
     }
     .overlay {
       if viewModel.isSubmitting {
@@ -214,8 +227,12 @@ struct TryOutView: View {
       
       // Doubt button
       Button(action: {
-        print("👤 User toggled doubt for soal \(soal.id)")
-        viewModel.toggleDoubt()
+        if viewModel.isCurrentSoalAnswered {
+          print("👤 User toggled doubt for soal \(soal.id)")
+          viewModel.toggleDoubt()
+        } else {
+          showDoubtRequiresAnswerAlert = true
+        }
       }) {
         HStack {
           Image(systemName: viewModel.isCurrentSoalMarkedAsDoubt() ? "flag.fill" : "flag")
@@ -256,7 +273,11 @@ struct TryOutView: View {
         Button(action: {
           if viewModel.isLastSoal {
             print("👤 User clicked finish button")
-            viewModel.showFinishTryOutConfirmation()
+            if viewModel.hasDoubtAnswers {
+              showDoubtFinishAlert = true
+            } else {
+              viewModel.showFinishTryOutConfirmation()
+            }
           } else {
             print("👤 User went to next question")
             viewModel.goToNextSoal()

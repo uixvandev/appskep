@@ -30,6 +30,17 @@ struct TryOutResultView: View {
     }
     return "N/A"
   }
+
+  private var headlineText: String {
+    let score = result.score
+    if score >= 80 {
+      return "Selamat!"
+    }
+    if score >= 60 {
+      return "Bagus!"
+    }
+    return "Tetap Semangat!"
+  }
   
   var body: some View {
     ZStack {
@@ -50,7 +61,7 @@ struct TryOutResultView: View {
             .padding(.top, 40)
           
           // Title
-          Text("Selamat!")
+          Text(headlineText)
             .font(.largeTitle)
             .fontWeight(.bold)
           

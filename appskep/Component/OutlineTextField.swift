@@ -21,6 +21,7 @@ struct OutlineTextField: View {
 
     @FocusState private var isFocused: Bool
     @State private var error: String?
+    @State private var isPasswordVisible = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
@@ -58,8 +59,27 @@ struct OutlineTextField: View {
             TextField(placeholder, text: $text)
                 .applyTextContentType(textContentType)
         case .secure:
-            SecureField(placeholder, text: $text)
+            HStack(spacing: 8) {
+                Group {
+                    if isPasswordVisible {
+                        TextField(placeholder, text: $text)
+                    } else {
+                        SecureField(placeholder, text: $text)
+                    }
+                }
                 .applyTextContentType(textContentType)
+
+                Spacer(minLength: 0)
+
+                Button(action: {
+                    isPasswordVisible.toggle()
+                }) {
+                    Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
+                        .foregroundColor(.neutral70)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isPasswordVisible ? "Sembunyikan password" : "Lihat password")
+            }
         }
     }
 

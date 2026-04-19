@@ -31,7 +31,7 @@ enum APIEndpoint {
   case getOrderHistory(page: Int, limit: Int)
   case getOrderDetail(id: Int)
   case checkClassAccess(kelasId: Int)
-  case checkRetryEligibility(orderId: Int, paketId: Int)
+  case checkRetryEligibility(orderId: Int, kelasPaketId: Int)
   case updateProfile
   case changePassword
   
@@ -45,7 +45,7 @@ enum APIEndpoint {
   }
   
   var baseURL: String {
-    return "https://28a9c6f04eb1.ngrok-free.app" // Ganti dengan base URL Anda
+    return "https://92ee-182-9-193-52.ngrok-free.app" // Ganti dengan base URL Anda
   }
   
   var path: String {
@@ -96,8 +96,8 @@ enum APIEndpoint {
       return "/api/v1/orders/\(id)"
     case .checkClassAccess(let kelasId):
       return "/api/v1/orders/check-access/\(kelasId)"
-    case .checkRetryEligibility(let orderId, let paketId):
-      return "/api/v1/tryouts/check-retry?order_id=\(orderId)&paket_id=\(paketId)"
+    case .checkRetryEligibility(let orderId, let kelasPaketId):
+      return "/api/v1/tryouts/check-retry?order_id=\(orderId)&kelas_paket_id=\(kelasPaketId)"
     case .updateProfile:
       return "/api/v1/users/profile"
     case .changePassword:

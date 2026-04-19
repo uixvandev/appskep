@@ -121,7 +121,7 @@ enum OrderStatus: String, Codable, CaseIterable {
     case paid = "paid"
     case expired = "expired"
     case cancel = "cancel"
-    case failure = "failure"
+    case failure = "failed"
     
     var displayName: String {
         switch self {
@@ -167,7 +167,7 @@ enum OrderFilter: String, CaseIterable {
     case pending = "pending"
     case paid = "paid"
     case expired = "expired"
-    case failure = "failure"
+    case failure = "failed"
     
     var displayName: String {
         switch self {

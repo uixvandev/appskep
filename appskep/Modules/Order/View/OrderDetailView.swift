@@ -11,6 +11,9 @@ struct OrderDetailView: View {
     let order: OrderItem
     @EnvironmentObject var viewModel: TransactionViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var selectedClassOrder: MyOrder?
+    @State private var showClassDetail = false
+    @State private var isFetchingClassDetail = false
     
     var body: some View {
         NavigationStack {
@@ -40,6 +43,11 @@ struct OrderDetailView: View {
                     Button("Tutup") {
                         dismiss()
                     }
+                }
+            }
+            .navigationDestination(isPresented: $showClassDetail) {
+                if let order = selectedClassOrder {
+                    MyClassDetailView(order: order)
                 }
             }
         }
@@ -116,16 +124,24 @@ struct OrderDetailView: View {
             case .paid:
                 Button(action: {
                     Task {
+                        guard !isFetchingClassDetail else { return }
+                        isFetchingClassDetail = true
                         let hasAccess = await viewModel.checkClassAccess(kelasId: order.kelas_id)
-                        if hasAccess {
-                            // Navigate to class
-                            dismiss()
+                        if hasAccess, let kelas = await viewModel.fetchKelasDetail(kelasId: order.kelas_id) {
+                            selectedClassOrder = MyOrder(id: order.id, status: order.status.rawValue, kelas: kelas)
+                            showClassDetail = true
                         }
+                        isFetchingClassDetail = false
                     }
                 }) {
                     HStack {
-                        Image(systemName: "book.fill")
-                        Text("Akses Kelas")
+                        if isFetchingClassDetail {
+                            ProgressView()
+                                .tint(.white)
+                        } else {
+                            Image(systemName: "book.fill")
+                        }
+                        Text(isFetchingClassDetail ? "Memuat..." : "Akses Kelas")
                     }
                     .font(.headline)
                     .foregroundColor(.white)
@@ -134,6 +150,7 @@ struct OrderDetailView: View {
                     .background(Color.green)
                     .cornerRadius(16)
                 }
+                .disabled(isFetchingClassDetail)
                 
             case .expired, .failure:
                 Button(action: {

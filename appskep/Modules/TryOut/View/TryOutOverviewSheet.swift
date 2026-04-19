@@ -10,6 +10,7 @@ import SwiftUI
 struct TryOutOverviewSheet: View {
   let totalSoal: Int
   let answeredSoalIds: Set<Int>
+  let doubtSoalIds: Set<Int>
   let soals: [Soal] // Add this to get actual soal IDs
   @Binding var currentSoalIndex: Int
   @Environment(\.dismiss) private var dismiss
@@ -23,6 +24,7 @@ struct TryOutOverviewSheet: View {
           ForEach(0..<totalSoal, id: \.self) { index in
             let soal = soals[index]
             let isAnswered = answeredSoalIds.contains(soal.id)
+            let isDoubt = doubtSoalIds.contains(soal.id)
             
             Button(action: {
               currentSoalIndex = index
@@ -31,8 +33,8 @@ struct TryOutOverviewSheet: View {
               Text("\(index + 1)")
                 .font(.headline)
                 .frame(width: 50, height: 50)
-                .background(getBackgroundColor(isAnswered: isAnswered, isCurrent: currentSoalIndex == index))
-                .foregroundColor(isAnswered ? .white : .primary)
+                .background(getBackgroundColor(isAnswered: isAnswered, isDoubt: isDoubt, isCurrent: currentSoalIndex == index))
+                .foregroundColor((isAnswered && !isDoubt) ? .white : .primary)
                 .cornerRadius(8)
                 .overlay(
                   RoundedRectangle(cornerRadius: 8)
@@ -53,7 +55,10 @@ struct TryOutOverviewSheet: View {
     }
   }
   
-  private func getBackgroundColor(isAnswered: Bool, isCurrent: Bool) -> Color {
+  private func getBackgroundColor(isAnswered: Bool, isDoubt: Bool, isCurrent: Bool) -> Color {
+    if isDoubt {
+      return .yellow
+    }
     if isAnswered {
       return Color.main
     } else {
@@ -66,6 +71,7 @@ struct TryOutOverviewSheet: View {
   TryOutOverviewSheet(
     totalSoal: 5,
     answeredSoalIds: [1, 3],
+    doubtSoalIds: [2],
     soals: [
       Soal(id: 1, question: "Test 1", explanation: "Test", pilihan_jawaban: []),
       Soal(id: 2, question: "Test 2", explanation: "Test", pilihan_jawaban: []),

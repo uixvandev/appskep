@@ -119,6 +119,16 @@ struct ChatBotView: View {
                     }
                     .padding()
                 }
+                .simultaneousGesture(
+                    DragGesture().onChanged { _ in
+                        // Dismiss keyboard when scrolling
+                        isTextFieldFocused = false
+                    }
+                )
+                .onTapGesture {
+                    // Dismiss keyboard when tapping on chat area
+                    isTextFieldFocused = false
+                }
                 .onChange(of: viewModel.messages.count) { _, _ in
                     if let lastMessage = viewModel.messages.last {
                         DispatchQueue.main.async {

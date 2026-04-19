@@ -16,6 +16,7 @@ struct PaymentWebView: View {
     @State private var canGoBack = false
     @State private var canGoForward = false
     @State private var showCloseConfirmation = false
+    @State private var didCompletePayment = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -35,6 +36,8 @@ struct PaymentWebView: View {
                 canGoForward: $canGoForward
             ) { success, orderID in
                 Task {
+                    print("💳 Payment callback: success=\(success) orderID=\(orderID ?? "nil")")
+                    didCompletePayment = true
                     await viewModel.handlePaymentCallback(success: success, orderID: orderID)
                     dismiss()
                 }
@@ -79,6 +82,12 @@ struct PaymentWebView: View {
             }
         } message: {
             Text("Apakah Anda yakin ingin membatalkan proses pembayaran?")
+        }
+        .onDisappear {
+            guard !didCompletePayment else { return }
+            Task {
+                await viewModel.verifyPaymentStatusAfterDismiss()
+            }
         }
     }
 }

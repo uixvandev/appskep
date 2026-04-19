@@ -16,9 +16,20 @@ struct ChatMessageView: View {
         self.onDelete = onDelete
     }
     
-    // Markdown parsing for bold/italic
+    // Markdown parsing for bold/italic with enhanced formatting
     private var attributedMessage: AttributedString {
-        (try? AttributedString(markdown: message.content)) ?? AttributedString(message.content)
+        // Try to parse as markdown first
+        if let parsedMarkdown = try? AttributedString(
+            markdown: message.content,
+            options: AttributedString.MarkdownParsingOptions(
+                interpretedSyntax: .inlineOnlyPreservingWhitespace
+            )
+        ) {
+            return parsedMarkdown
+        }
+        
+        // Fallback to plain text if markdown parsing fails
+        return AttributedString(message.content)
     }
     
     var body: some View {
@@ -43,14 +54,15 @@ struct ChatMessageView: View {
                             .foregroundColor(.red.opacity(0.7))
                     }
                 }
-                // Ganti ke Text(attributedMessage)
+                // Enhanced markdown rendering for user messages
                 Text(attributedMessage)
                     .font(.body)
-                    .lineSpacing(2)
+                    .lineSpacing(6)
                     .padding(12)
                     .background(Color.main)
                     .foregroundColor(.white)
                     .cornerRadius(16, corners: [.topLeft, .topRight, .bottomLeft])
+                    .textSelection(.enabled)
             }
             Text(formatTime(message.timestamp))
                 .font(.caption2)
@@ -82,15 +94,17 @@ struct ChatMessageView: View {
                         }
                     }
                 }
-                // Ganti ke Text(attributedMessage)
+                // Enhanced markdown rendering for bot messages
                 Text(attributedMessage)
                     .font(.body)
-                    .lineSpacing(2)
+                    .lineSpacing(6)
                     .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color(.systemGray6))
                     .foregroundColor(.primary)
                     .cornerRadius(16, corners: [.topRight, .bottomLeft, .bottomRight])
                     .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
                 Text(formatTime(message.timestamp))
                     .font(.caption2)
                     .foregroundColor(.secondary)

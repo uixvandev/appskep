@@ -11,6 +11,10 @@ struct MyClassView: View {
   @EnvironmentObject private var viewModel: MyClassViewModel
   @State private var needsRefreshFromPayment = false
   @State private var isPullRefreshing = false
+  @State private var selectedOrder: MyOrder?
+  @State private var showOrderDetail = false
+  @State private var pendingOrderId: Int?
+  @State private var pendingKelasId: Int?
   
   var body: some View {
     ZStack(alignment: .top) {
@@ -90,6 +94,7 @@ struct MyClassView: View {
           needsRefreshFromPayment = false
           await viewModel.refreshMyClasses()
         }
+        openPendingOrderIfPossible()
       }
     }
     .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("RefreshMyClasses"))) { _ in
@@ -97,7 +102,23 @@ struct MyClassView: View {
       needsRefreshFromPayment = true
     }
     .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("RefreshMyClassesWithRetry"))) { _ in
-      Task { await viewModel.refreshWithRetry() }
+      Task {
+        await viewModel.refreshWithRetry()
+        openPendingOrderIfPossible()
+      }
+    }
+    .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("OpenMyClassDetail"))) { notification in
+      pendingOrderId = notification.userInfo?["orderId"] as? Int
+      pendingKelasId = notification.userInfo?["kelasId"] as? Int
+      Task {
+        await viewModel.refreshWithRetry()
+        openPendingOrderIfPossible()
+      }
+    }
+    .navigationDestination(isPresented: $showOrderDetail) {
+      if let order = selectedOrder {
+        MyClassDetailView(order: order)
+      }
     }
     .alert("Error", isPresented: .constant(viewModel.errorMessage != nil && !viewModel.myPaidClasses.isEmpty)) {
       Button("OK") {
@@ -112,6 +133,27 @@ struct MyClassView: View {
       if let errorMessage = viewModel.errorMessage {
         Text(errorMessage)
       }
+    }
+  }
+
+  private func openPendingOrderIfPossible() {
+    guard !showOrderDetail else { return }
+
+    if let pendingOrderId = pendingOrderId,
+       let order = viewModel.myPaidClasses.first(where: { $0.id == pendingOrderId }) {
+      selectedOrder = order
+      showOrderDetail = true
+      self.pendingOrderId = nil
+      self.pendingKelasId = nil
+      return
+    }
+
+    if let pendingKelasId = pendingKelasId,
+       let order = viewModel.myPaidClasses.first(where: { $0.kelas.id == pendingKelasId }) {
+      selectedOrder = order
+      showOrderDetail = true
+      self.pendingOrderId = nil
+      self.pendingKelasId = nil
     }
   }
 }

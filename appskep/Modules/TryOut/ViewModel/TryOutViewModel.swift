@@ -66,13 +66,26 @@ class TryOutViewModel: ObservableObject {
   var canFinishTryOut: Bool {
     answeredQuestionsCount == totalQuestionsCount && totalQuestionsCount > 0
   }
+
+  var hasDoubtAnswers: Bool {
+    !doubtAnswers.isEmpty
+  }
+
+  var doubtSoalIds: Set<Int> {
+    doubtAnswers
+  }
+
+  var isCurrentSoalAnswered: Bool {
+    guard let currentSoalId = currentSoal?.id else { return false }
+    return _selectedAnswers[currentSoalId] != nil
+  }
   
   // MARK: - Public Methods (Actions from View)
-  func startTryOut(orderId: Int, paketId: Int) async -> Bool {
+    func startTryOut(orderId: Int, kelasPaketId: Int) async -> Bool {
       isLoading = true
       errorMessage = nil
       
-      let request = StartTryOutRequest(order_id: orderId, paket_id: paketId)
+        let request = StartTryOutRequest(order_id: orderId, kelas_paket_id: kelasPaketId)
       
       do {
           let bodyData = try JSONEncoder().encode(request)
@@ -126,9 +139,11 @@ class TryOutViewModel: ObservableObject {
         
         // Create tryOutSession from tryOutDetail if it doesn't exist
         if self.tryOutSession == nil {
+          let kelasPaketId = response.data.kelas_paket_id ?? response.data.paket.id
           self.tryOutSession = TryOutSessionData(
             id: response.data.id,
             order_id: 0, // We don't have this from detail response
+            kelas_paket_id: kelasPaketId,
             paket_id: response.data.paket.id,
             started_at: "", // We don't have this from detail response
             status: "started",
@@ -217,6 +232,12 @@ class TryOutViewModel: ObservableObject {
     // Skip validation if this is an auto-submission (timer expired)
     if !isAutoSubmit && answeredQuestionsCount < totalQuestionsCount {
       errorMessage = "Harap jawab semua soal sebelum menyelesaikan try out."
+      showFinishConfirmation = false
+      return
+    }
+
+    if !isAutoSubmit && !doubtAnswers.isEmpty {
+      errorMessage = "Masih ada soal yang ditandai ragu. Hapus tanda ragu sebelum menyelesaikan try out."
       showFinishConfirmation = false
       return
     }

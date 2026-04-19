@@ -525,10 +525,14 @@ struct TryOutInfoSheet: View {
     // MARK: - API Methods
     private func checkRetryEligibility() async {
         actionState = .loading
+        guard let kelasPaketId = paket.kelas_paket_id else {
+            actionState = .error("Kelas paket tidak ditemukan. Silakan coba lagi.")
+            return
+        }
         
         do {
             let response: RetryEligibilityResponse = try await APIService.shared.performRequest(
-                endpoint: .checkRetryEligibility(orderId: orderId, paketId: paket.id),
+                endpoint: .checkRetryEligibility(orderId: orderId, kelasPaketId: kelasPaketId),
                 method: .GET,
                 responseType: RetryEligibilityResponse.self
             )
@@ -563,7 +567,10 @@ struct TryOutInfoSheet: View {
             if response.success {
                 // Find the try-out for this paket that is completed
                 let completedTryOut = response.data.data.first { historyItem in
-                    historyItem.paket_id == paket.id && historyItem.finished_at != nil
+                    if let kelasPaketId = paket.kelas_paket_id {
+                        return historyItem.kelas_paket_id == kelasPaketId && historyItem.finished_at != nil
+                    }
+                    return historyItem.paket_id == paket.id && historyItem.finished_at != nil
                 }
                 
                 if let tryOut = completedTryOut {
@@ -592,7 +599,12 @@ struct TryOutInfoSheet: View {
     }
     
     private func startTryOut() async {
-        let success = await viewModel.startTryOut(orderId: orderId, paketId: paket.id)
+        guard let kelasPaketId = paket.kelas_paket_id else {
+            actionState = .error("Kelas paket tidak ditemukan. Silakan coba lagi.")
+            return
+        }
+
+        let success = await viewModel.startTryOut(orderId: orderId, kelasPaketId: kelasPaketId)
         if success, let sessionId = viewModel.tryOutSession?.id {
             dismiss()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -882,6 +894,17 @@ struct TryOutResultDetailSheet: View {
     }
     private var mockDuration: String { "45 Menit" }
 
+    private var headlineText: String {
+        let score = attempt.score
+        if score >= 80 {
+            return "Selamat!"
+        }
+        if score >= 60 {
+            return "Bagus!"
+        }
+        return "Tetap Semangat!"
+    }
+
     private func formatScore(_ score: Double) -> String {
         if score.truncatingRemainder(dividingBy: 1) == 0 {
             return "\(Int(score))"
@@ -909,7 +932,7 @@ struct TryOutResultDetailSheet: View {
                             .padding(.top, 40)
                         
                         // Title (same as TryOutResultView)
-                        Text("Selamat!")
+                        Text(headlineText)
                             .font(.largeTitle)
                             .fontWeight(.bold)
                         
