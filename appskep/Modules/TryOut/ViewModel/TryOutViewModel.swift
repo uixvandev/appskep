@@ -16,8 +16,8 @@ class TryOutViewModel: ObservableObject {
   @Published var showFinishConfirmation = false
   
   // MARK: - Private State
-  private var _selectedAnswers: [Int: Int] = [:] // [soalId: pilihanJawabanId]
-  private var doubtAnswers: Set<Int> = [] // Set of soal IDs marked as doubt
+  private var _selectedAnswers: [String: Int] = [:] // [questionCode: optionsId]
+  private var doubtAnswers: Set<String> = [] // Set of question codes marked as doubt
   private var timeRemainingInSeconds: Int = 0
   private var timer: AnyCancellable?
   
@@ -29,7 +29,7 @@ class TryOutViewModel: ObservableObject {
   }
   
   // MARK: - Public computed properties for UI access
-  var selectedAnswers: [Int: Int] {
+  var selectedAnswers: [String: Int] {
     return _selectedAnswers
   }
   
@@ -71,21 +71,21 @@ class TryOutViewModel: ObservableObject {
     !doubtAnswers.isEmpty
   }
 
-  var doubtSoalIds: Set<Int> {
+  var doubtQuestionCodes: Set<String> {
     doubtAnswers
   }
 
   var isCurrentSoalAnswered: Bool {
-    guard let currentSoalId = currentSoal?.id else { return false }
-    return _selectedAnswers[currentSoalId] != nil
+    guard let currentQuestionCode = currentSoal?.question_code else { return false }
+    return _selectedAnswers[currentQuestionCode] != nil
   }
   
   // MARK: - Public Methods (Actions from View)
-    func startTryOut(orderId: Int, kelasPaketId: Int) async -> Bool {
+    func startTryOut(orderNumber: String, packageCode: String) async -> Bool {
       isLoading = true
       errorMessage = nil
       
-        let request = StartTryOutRequest(order_id: orderId, kelas_paket_id: kelasPaketId)
+        let request = StartTryOutRequest(order_number: orderNumber, package_code: packageCode)
       
       do {
           let bodyData = try JSONEncoder().encode(request)
@@ -122,13 +122,13 @@ class TryOutViewModel: ObservableObject {
       }
   }
   
-  func fetchTryOutDetail(tryOutId: Int) async {
+  func fetchTryOutDetail(tryoutCode: String) async {
     isLoading = true
     errorMessage = nil
     
     do {
       let response: TryOutDetailResponse = try await APIService.shared.performRequest(
-        endpoint: .getTryOutDetail(id: tryOutId),
+        endpoint: .getTryOutDetail(tryoutCode: tryoutCode),
         method: .GET,
         responseType: TryOutDetailResponse.self
       )
@@ -139,17 +139,16 @@ class TryOutViewModel: ObservableObject {
         
         // Create tryOutSession from tryOutDetail if it doesn't exist
         if self.tryOutSession == nil {
-          let kelasPaketId = response.data.kelas_paket_id ?? response.data.paket.id
+          let packageCode: String = response.data.package_code ?? ""
           self.tryOutSession = TryOutSessionData(
-            id: response.data.id,
-            order_id: 0, // We don't have this from detail response
-            kelas_paket_id: kelasPaketId,
-            paket_id: response.data.paket.id,
+            tryout_code: response.data.tryout_code,
+            order_number: "", // We don't have this from detail response
+            package_code: packageCode,
             started_at: "", // We don't have this from detail response
             status: "started",
             paket_name: response.data.paket.name
           )
-          print("✅ TryOut session created from detail with ID: \(response.data.id)")
+          print("✅ TryOut session created from detail with code: \(response.data.tryout_code)")
         }
         
         startTimer()
@@ -179,33 +178,33 @@ class TryOutViewModel: ObservableObject {
   }
   
   func selectAnswer(optionId: Int) {
-    guard let currentSoalId = currentSoal?.id else { return }
-    _selectedAnswers[currentSoalId] = optionId
-    print("📝 Answer selected for soal \(currentSoalId): option \(optionId)")
+    guard let currentQuestionCode = currentSoal?.question_code else { return }
+    _selectedAnswers[currentQuestionCode] = optionId
+    print("📝 Answer selected for soal \(currentQuestionCode): option \(optionId)")
     // Force UI update for the selected option
     objectWillChange.send()
   }
   
   func toggleDoubt() {
-    guard let currentSoalId = currentSoal?.id else { return }
-    if doubtAnswers.contains(currentSoalId) {
-      doubtAnswers.remove(currentSoalId)
-      print("🚩 Removed doubt flag for soal \(currentSoalId)")
+    guard let currentQuestionCode = currentSoal?.question_code else { return }
+    if doubtAnswers.contains(currentQuestionCode) {
+      doubtAnswers.remove(currentQuestionCode)
+      print("🚩 Removed doubt flag for soal \(currentQuestionCode)")
     } else {
-      doubtAnswers.insert(currentSoalId)
-      print("🚩 Added doubt flag for soal \(currentSoalId)")
+      doubtAnswers.insert(currentQuestionCode)
+      print("🚩 Added doubt flag for soal \(currentQuestionCode)")
     }
     objectWillChange.send()
   }
   
   func isSelected(option: PilihanJawaban) -> Bool {
-    guard let currentSoalId = currentSoal?.id else { return false }
-    return _selectedAnswers[currentSoalId] == option.id
+    guard let currentQuestionCode = currentSoal?.question_code else { return false }
+    return _selectedAnswers[currentQuestionCode] == option.options_id
   }
   
   func isCurrentSoalMarkedAsDoubt() -> Bool {
-    guard let currentSoalId = currentSoal?.id else { return false }
-    return doubtAnswers.contains(currentSoalId)
+    guard let currentQuestionCode = currentSoal?.question_code else { return false }
+    return doubtAnswers.contains(currentQuestionCode)
   }
   
   func showFinishTryOutConfirmation() {
@@ -213,15 +212,15 @@ class TryOutViewModel: ObservableObject {
   }
   
   func finishTryOut(isAutoSubmit: Bool = false) async {
-    // Try to get tryOutId from multiple sources
-    let tryOutId: Int
+    // Try to get tryoutCode from multiple sources
+    let tryoutCode: String
     
-    if let sessionId = tryOutSession?.id {
-      tryOutId = sessionId
-      print("🎯 Using tryOutId from session: \(tryOutId)")
-    } else if let detailId = tryOutDetail?.id {
-      tryOutId = detailId
-      print("🎯 Using tryOutId from detail: \(tryOutId)")
+    if let sessionCode = tryOutSession?.tryout_code {
+      tryoutCode = sessionCode
+      print("🎯 Using tryoutCode from session: \(tryoutCode)")
+    } else if let detailCode = tryOutDetail?.tryout_code {
+      tryoutCode = detailCode
+      print("🎯 Using tryoutCode from detail: \(tryoutCode)")
     } else {
       errorMessage = "Try out session not found"
       print("❌ Error: Try out session not found - both session and detail are nil")
@@ -242,7 +241,7 @@ class TryOutViewModel: ObservableObject {
       return
     }
     
-    print("🚀 Starting finish try out process for ID: \(tryOutId)")
+    print("🚀 Starting finish try out process for code: \(tryoutCode)")
     print("📊 Current answers: \(_selectedAnswers)")
     print("🚩 Current doubts: \(doubtAnswers)")
     
@@ -251,12 +250,12 @@ class TryOutViewModel: ObservableObject {
     
     // Step 1: Submit all answers
     print("📝 Step 1: Submitting all answers...")
-    let submitSuccess = await submitAllAnswers(tryOutId: tryOutId)
+    let submitSuccess = await submitAllAnswers(tryoutCode: tryoutCode)
     
     if submitSuccess {
       print("✅ Step 1 successful. Proceeding to finish try out...")
       // Step 2: Finish try out
-      await finishTryOutSession(tryOutId: tryOutId)
+      await finishTryOutSession(tryoutCode: tryoutCode)
     } else {
       print("❌ Step 1 failed. Cannot proceed to finish try out.")
     }
@@ -266,7 +265,7 @@ class TryOutViewModel: ObservableObject {
   
   // MARK: - Private Methods
   
-  private func submitAllAnswers(tryOutId: Int) async -> Bool {
+  private func submitAllAnswers(tryoutCode: String) async -> Bool {
     guard let soals = tryOutDetail?.soals else {
       errorMessage = "No questions found"
       print("❌ Error: No questions found")
@@ -275,24 +274,24 @@ class TryOutViewModel: ObservableObject {
     
     // Create answers array from selectedAnswers
     let answers: [AnswerSubmission] = soals.compactMap { soal in
-      guard let selectedOptionId = _selectedAnswers[soal.id] else {
-        print("⚠️ Skipping unanswered question: \(soal.id)")
+      guard let selectedOptionId = _selectedAnswers[soal.question_code] else {
+        print("⚠️ Skipping unanswered question: \(soal.question_code)")
         return nil // Skip unanswered questions
       }
       
       let submission = AnswerSubmission(
-        soal_id: soal.id,
-        pilihan_jawaban_id: selectedOptionId,
-        is_doubt: doubtAnswers.contains(soal.id)
+        question_code: soal.question_code,
+        options_id: selectedOptionId,
+        is_doubt: doubtAnswers.contains(soal.question_code)
       )
       
-      print("📋 Including answer: soal_id=\(soal.id), option_id=\(selectedOptionId), is_doubt=\(doubtAnswers.contains(soal.id))")
+      print("📋 Including answer: question_code=\(soal.question_code), option_id=\(selectedOptionId), is_doubt=\(doubtAnswers.contains(soal.question_code))")
       return submission
     }
     
     print("📊 Submitting \(answers.count) answers out of \(soals.count) questions")
     
-    let request = SubmitAllAnswersRequest(try_out_id: tryOutId, answers: answers)
+    let request = SubmitAllAnswersRequest(tryout_code: tryoutCode, answers: answers)
     
     do {
       let bodyData = try JSONEncoder().encode(request)
@@ -315,8 +314,13 @@ class TryOutViewModel: ObservableObject {
         print("✅ All answers submitted successfully")
         return true
       } else {
-        self.errorMessage = response.error ?? response.message
-        print("❌ Submit All Answers Error: \(response.error ?? response.message)")
+        let message = response.error ?? response.message
+        if message.contains("already finished") {
+          print("⚠️ Try out already finished on server. Proceeding to results.")
+          return true
+        }
+        self.errorMessage = message
+        print("❌ Submit All Answers Error: \(message)")
         return false
       }
     } catch {
@@ -326,8 +330,8 @@ class TryOutViewModel: ObservableObject {
     }
   }
   
-  private func finishTryOutSession(tryOutId: Int) async {
-    let request = FinishTryOutRequest(try_out_id: tryOutId)
+  private func finishTryOutSession(tryoutCode: String) async {
+    let request = FinishTryOutRequest(tryout_code: tryoutCode)
     
     do {
       let bodyData = try JSONEncoder().encode(request)
@@ -346,7 +350,7 @@ class TryOutViewModel: ObservableObject {
       
       print("📥 Finish Try Out Response: success=\(response.success), message=\(response.message)")
       
-      if response.success {
+        if response.success {
         print("✅ Try out finished successfully!")
         if let result = response.data {
           print("📊 Final Score: \(result.score)")

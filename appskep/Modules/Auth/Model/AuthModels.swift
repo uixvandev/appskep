@@ -17,7 +17,7 @@ struct RegisterRequest: Codable {
     self.name = name
     self.email = email
     self.password = password
-    self.role = "mahasiswa" // Default role
+    self.role = "student" // Changed from "mahasiswa" to "student"
   }
 }
 

@@ -13,8 +13,8 @@ struct MyClassView: View {
   @State private var isPullRefreshing = false
   @State private var selectedOrder: MyOrder?
   @State private var showOrderDetail = false
-  @State private var pendingOrderId: Int?
-  @State private var pendingKelasId: Int?
+  @State private var pendingOrderNumber: String?
+  @State private var pendingClassCode: String?
   
   var body: some View {
     ZStack(alignment: .top) {
@@ -108,8 +108,8 @@ struct MyClassView: View {
       }
     }
     .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("OpenMyClassDetail"))) { notification in
-      pendingOrderId = notification.userInfo?["orderId"] as? Int
-      pendingKelasId = notification.userInfo?["kelasId"] as? Int
+      pendingOrderNumber = notification.userInfo?["orderNumber"] as? String
+      pendingClassCode = notification.userInfo?["classCode"] as? String
       Task {
         await viewModel.refreshWithRetry()
         openPendingOrderIfPossible()
@@ -139,21 +139,21 @@ struct MyClassView: View {
   private func openPendingOrderIfPossible() {
     guard !showOrderDetail else { return }
 
-    if let pendingOrderId = pendingOrderId,
-       let order = viewModel.myPaidClasses.first(where: { $0.id == pendingOrderId }) {
+    if let pendingOrderNumber = pendingOrderNumber,
+       let order = viewModel.myPaidClasses.first(where: { $0.order_number == pendingOrderNumber }) {
       selectedOrder = order
       showOrderDetail = true
-      self.pendingOrderId = nil
-      self.pendingKelasId = nil
+      self.pendingOrderNumber = nil
+      self.pendingClassCode = nil
       return
     }
 
-    if let pendingKelasId = pendingKelasId,
-       let order = viewModel.myPaidClasses.first(where: { $0.kelas.id == pendingKelasId }) {
+    if let pendingClassCode = pendingClassCode,
+       let order = viewModel.myPaidClasses.first(where: { $0.kelas.class_code == pendingClassCode }) {
       selectedOrder = order
       showOrderDetail = true
-      self.pendingOrderId = nil
-      self.pendingKelasId = nil
+      self.pendingOrderNumber = nil
+      self.pendingClassCode = nil
     }
   }
 }

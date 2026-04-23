@@ -136,7 +136,7 @@ struct TransactionView: View {
                             .environmentObject(viewModel)
                             .onAppear {
                                 // Load more when reaching last item
-                                if order.id == viewModel.orders.last?.id {
+                                if order.order_number == viewModel.orders.last?.order_number {
                                     Task {
                                         await viewModel.loadMoreOrders()
                                     }

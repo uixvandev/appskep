@@ -62,7 +62,7 @@ struct OrderDetailView: View {
                 .fontWeight(.bold)
                 .foregroundColor(.main)
             
-            Text("Order #\(order.order_number ?? order.id)")
+            Text("Order #\(order.order_number)")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }
@@ -121,14 +121,14 @@ struct OrderDetailView: View {
                     }
                 }
                 
-            case .paid:
+            case .success:
                 Button(action: {
                     Task {
                         guard !isFetchingClassDetail else { return }
                         isFetchingClassDetail = true
-                        let hasAccess = await viewModel.checkClassAccess(kelasId: order.kelas_id)
-                        if hasAccess, let kelas = await viewModel.fetchKelasDetail(kelasId: order.kelas_id) {
-                            selectedClassOrder = MyOrder(id: order.id, status: order.status.rawValue, kelas: kelas)
+                        let hasAccess = await viewModel.checkClassAccess(classCode: order.class_code)
+                        if hasAccess, let kelas = await viewModel.fetchKelasDetail(classCode: order.class_code) {
+                            selectedClassOrder = MyOrder(order_number: order.order_number, status: order.status.rawValue, kelas: kelas)
                             showClassDetail = true
                         }
                         isFetchingClassDetail = false
@@ -152,7 +152,7 @@ struct OrderDetailView: View {
                 }
                 .disabled(isFetchingClassDetail)
                 
-            case .expired, .failure:
+            case .failed:
                 Button(action: {
                     viewModel.retryOrder(order: order)
                     dismiss()
@@ -233,9 +233,9 @@ struct InfoRowView: View {
 #Preview {
     OrderDetailView(
         order: OrderItem(
-            id: 1,
-            order_number: 12345,
-            kelas_id: 1,
+            order_number: "appskep001",
+            class_code: "UKOM-001",
+            email: "john@example.com",
             status: .pending,
             payment_reference: "TXN123456",
             gross_amount: 299000,
@@ -243,8 +243,7 @@ struct InfoRowView: View {
             snap_redirect_url: "https://example.com",
             created_at: "2025-01-01T10:00:00Z",
             updated_at: "2025-01-01T10:00:00Z",
-            user: UserInfo(id: 1, name: "John Doe", email: "john@example.com"),
-            kelas: KelasInfo(id: 1, name: "Kelas UKOM Keperawatan Premium", description: "Kelas persiapan UKOM terlengkap", price: 299000)
+            kelas: KelasInfo(class_code: "UKOM-001", name: "Kelas UKOM Keperawatan Premium", description: "Kelas persiapan UKOM terlengkap", price: 299000)
         )
     )
     .environmentObject(TransactionViewModel())

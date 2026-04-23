@@ -9,7 +9,7 @@ import SwiftUI
 import SafariServices
 
 struct SearchClassDetailView: View {
-  let classId: Int
+  let classCode: String
   @StateObject private var viewModel = SearchClassDetailViewModel()
   @Environment(\.dismiss) private var dismiss
   
@@ -65,7 +65,7 @@ struct SearchClassDetailView: View {
           VStack(spacing: 0) {
             Button {
               Task {
-                await viewModel.buyClass(classId: ukomClass.id)
+                await viewModel.buyClass(classCode: ukomClass.class_code)
               }
             } label: {
               CustomLongButton(
@@ -104,7 +104,7 @@ struct SearchClassDetailView: View {
           
           Button("Coba Lagi") {
             Task {
-              await viewModel.fetchAllDetails(id: classId)
+              await viewModel.fetchAllDetails(classCode: classCode)
             }
           }
           .font(.headline)
@@ -132,7 +132,7 @@ struct SearchClassDetailView: View {
     }
     .onAppear {
       Task {
-        await viewModel.fetchAllDetails(id: classId)
+        await viewModel.fetchAllDetails(classCode: classCode)
       }
     }
     // Regular order error alert
@@ -221,5 +221,5 @@ struct PaketRowView: View {
 }
 
 #Preview {
-  SearchClassDetailView(classId: 1)
+  SearchClassDetailView(classCode: "UKOM-001")
 }

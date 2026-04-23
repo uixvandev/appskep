@@ -45,8 +45,8 @@ struct TryOutHistoryView: View {
         if item.finished_at != nil {
             // Use coordinator instead of NavigationLink
             Button(action: {
-                print("📚 Opening pembahasan for try out ID: \(item.id)")
-                tryOutCoordinator.showPembahasan(tryOutId: item.id)
+                print("📚 Opening pembahasan for try out code: \(item.tryout_code)")
+                tryOutCoordinator.showPembahasan(tryoutCode: item.tryout_code)
             }) {
                 TryOutHistoryRow(item: item)
             }
@@ -65,7 +65,7 @@ struct TryOutHistoryView: View {
     
     private func loadMoreIfNeeded(for item: TryOutHistoryItem) {
         // Load more data when the last item appears
-        if item.id == viewModel.historyItems.last?.id {
+        if item.tryout_code == viewModel.historyItems.last?.tryout_code {
             Task {
                 await viewModel.fetchHistory()
             }

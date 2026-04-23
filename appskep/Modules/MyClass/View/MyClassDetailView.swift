@@ -12,7 +12,7 @@ struct MyClassDetailView: View {
     @StateObject private var viewModel = SearchClassDetailViewModel()
     @State private var selectedPaket: Paket?
     @State private var showTryOutFullScreen = false
-    @State private var tryOutId: Int?
+    @State private var tryOutCode: String?
     
     var body: some View {
         ScrollView {
@@ -31,12 +31,12 @@ struct MyClassDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             Task {
-                await viewModel.fetchAllDetails(id: order.kelas.id)
+                await viewModel.fetchAllDetails(classCode: order.kelas.class_code)
             }
         }
         .sheet(item: $selectedPaket) { paket in
             NavigationStack {
-                TryOutInfoSheet(paket: paket, orderId: order.id)
+                TryOutInfoSheet(paket: paket, orderNumber: order.order_number)
             }
         }
     }
@@ -143,6 +143,6 @@ struct PaketSkeletonView: View {
 
 #Preview {
     NavigationStack {
-        MyClassDetailView(order: MyOrder(id: 1, status: "paid", kelas: .init(id: 1, name: "Test", description: "Test", price: 1000)))
+        MyClassDetailView(order: MyOrder(order_number: "appskep001", status: "success", kelas: .init(class_code: "UKOM-001", name: "Test", description: "Test", price: 1000, is_active: nil)))
     }
 }

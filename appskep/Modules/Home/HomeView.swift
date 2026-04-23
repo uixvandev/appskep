@@ -178,7 +178,7 @@ struct HomeView: View {
       } else {
         LazyVGrid(columns: newClassesColumns, spacing: 16) {
           ForEach(searchViewModel.ukomClasses.prefix(4)) { ukomClass in
-            NavigationLink(destination: SearchClassDetailView(classId: ukomClass.id)) {
+            NavigationLink(destination: SearchClassDetailView(classCode: ukomClass.class_code)) {
               ClassCardView(ukomClass: ukomClass)
             }
             .buttonStyle(PlainButtonStyle())

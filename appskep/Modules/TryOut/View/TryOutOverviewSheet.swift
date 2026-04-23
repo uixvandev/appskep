@@ -9,8 +9,8 @@ import SwiftUI
 
 struct TryOutOverviewSheet: View {
   let totalSoal: Int
-  let answeredSoalIds: Set<Int>
-  let doubtSoalIds: Set<Int>
+  let answeredSoalIds: Set<String>
+  let doubtSoalIds: Set<String>
   let soals: [Soal] // Add this to get actual soal IDs
   @Binding var currentSoalIndex: Int
   @Environment(\.dismiss) private var dismiss
@@ -23,8 +23,8 @@ struct TryOutOverviewSheet: View {
         LazyVGrid(columns: columns, spacing: 16) {
           ForEach(0..<totalSoal, id: \.self) { index in
             let soal = soals[index]
-            let isAnswered = answeredSoalIds.contains(soal.id)
-            let isDoubt = doubtSoalIds.contains(soal.id)
+            let isAnswered = answeredSoalIds.contains(soal.question_code)
+            let isDoubt = doubtSoalIds.contains(soal.question_code)
             
             Button(action: {
               currentSoalIndex = index
@@ -70,14 +70,14 @@ struct TryOutOverviewSheet: View {
 #Preview {
   TryOutOverviewSheet(
     totalSoal: 5,
-    answeredSoalIds: [1, 3],
-    doubtSoalIds: [2],
+    answeredSoalIds: ["SOAL-001", "SOAL-003"],
+    doubtSoalIds: ["SOAL-002"],
     soals: [
-      Soal(id: 1, question: "Test 1", explanation: "Test", pilihan_jawaban: []),
-      Soal(id: 2, question: "Test 2", explanation: "Test", pilihan_jawaban: []),
-      Soal(id: 3, question: "Test 3", explanation: "Test", pilihan_jawaban: []),
-      Soal(id: 4, question: "Test 4", explanation: "Test", pilihan_jawaban: []),
-      Soal(id: 5, question: "Test 5", explanation: "Test", pilihan_jawaban: [])
+      Soal(question_code: "SOAL-001", question: "Test 1", explanation: "Test", pilihan_jawaban: []),
+      Soal(question_code: "SOAL-002", question: "Test 2", explanation: "Test", pilihan_jawaban: []),
+      Soal(question_code: "SOAL-003", question: "Test 3", explanation: "Test", pilihan_jawaban: []),
+      Soal(question_code: "SOAL-004", question: "Test 4", explanation: "Test", pilihan_jawaban: []),
+      Soal(question_code: "SOAL-005", question: "Test 5", explanation: "Test", pilihan_jawaban: [])
     ],
     currentSoalIndex: .constant(0)
   )

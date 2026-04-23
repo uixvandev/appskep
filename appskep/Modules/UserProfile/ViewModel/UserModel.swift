@@ -8,7 +8,7 @@
 import Foundation
 
 struct UserModel: Codable, Identifiable {
-  let id: Int
+  var id: String { email } // Gunakan email sebagai identifier (id dihapus dari response)
       let name: String
       let email: String
       let role: String
@@ -24,7 +24,7 @@ struct UserModel: Codable, Identifiable {
       let updatedAt: String
       
       enum CodingKeys: String, CodingKey {
-          case id, name, email, role, gender, profession, address, province, city
+          case name, email, role, gender, profession, address, province, city
           case phoneNumber = "phone_number"
           case dateOfBirth = "date_of_birth"
           case educationalInstitution = "educational_institution"

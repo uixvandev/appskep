@@ -38,5 +38,5 @@ struct AnswerOptionView: View {
 }
 
 #Preview {
-  AnswerOptionView(option: PilihanJawaban(id: 1, soal_id: 1, option_text: "Assaa", is_correct: true), index: "A", isSelected: true)
+  AnswerOptionView(option: PilihanJawaban(options_id: 1, question_code: "SOAL-001", option_text: "Assaa", is_correct: true), index: "A", isSelected: true)
 }

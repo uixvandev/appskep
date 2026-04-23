@@ -22,10 +22,17 @@ struct UkomClassData: Codable {
 }
 
 struct UkomClass: Codable, Identifiable, Hashable {
-    let id: Int
+    let class_code: String
     let name: String
     let description: String
     let price: Int
+    let is_active: Int?
+    
+    var id: String { class_code }
+    
+    enum CodingKeys: String, CodingKey {
+        case class_code, name, description, price, is_active
+    }
 }
 
 struct UkomClassDetailResponse: Codable {

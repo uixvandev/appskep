@@ -22,7 +22,9 @@ struct MyOrderData: Codable {
 }
 
 struct MyOrder: Codable, Identifiable {
-    let id: Int
+    let order_number: String
     let status: String
     let kelas: UkomClass
+    
+    var id: String { order_number }
 }

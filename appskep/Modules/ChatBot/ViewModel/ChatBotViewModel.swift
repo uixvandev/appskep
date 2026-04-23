@@ -24,7 +24,7 @@ class ChatBotViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var isDeletingMessage = false
     
-    private var currentSoalId: Int?
+    private var currentQuestionCode: String?
     private var hasLoadedHistory = false
     
     // MARK: - Simple intent detection for small talk
@@ -56,20 +56,20 @@ class ChatBotViewModel: ObservableObject {
         return nil
     }
     
-    // Public helper so View can decide to omit soalId
-    func shouldOmitSoalId(for text: String) -> Bool {
+    // Public helper so View can decide to omit questionCode
+    func shouldOmitQuestionCode(for text: String) -> Bool {
         return detectSmallTalk(in: text) != nil
     }
     
-    func loadChatHistory(soalId: Int) async {
+    func loadChatHistory(questionCode: String) async {
         guard !hasLoadedHistory else { return }
         
-        currentSoalId = soalId
+        currentQuestionCode = questionCode
         isLoadingHistory = true
         
         do {
             let response: ChatHistoryResponse = try await APIService.shared.performRequest(
-                endpoint: .getChatHistory(page: 1, limit: 50, soalId: soalId),
+                endpoint: .getChatHistory(page: 1, limit: 50, questionCode: questionCode),
                 method: .GET,
                 responseType: ChatHistoryResponse.self
             )
@@ -105,7 +105,7 @@ class ChatBotViewModel: ObservableObject {
         isLoadingHistory = false
     }
     
-    func sendMessage(_ message: String, soalId: Int? = nil) async {
+    func sendMessage(_ message: String, questionCode: String? = nil) async {
         // Add user message
         let userMessage = ChatMessage(
             id: Int(Date().timeIntervalSince1970 * 1000), // Unique timestamp-based ID
@@ -117,7 +117,7 @@ class ChatBotViewModel: ObservableObject {
         messages.append(userMessage)
         
         // If it's small talk and no specific soal context is provided, reply locally to avoid long, off-topic responses
-        if soalId == nil, let smallTalk = detectSmallTalk(in: message) {
+        if questionCode == nil, let smallTalk = detectSmallTalk(in: message) {
             let reply: String
             switch smallTalk {
             case .greeting:
@@ -141,7 +141,7 @@ class ChatBotViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         
-        let request = ChatRequest(message: message, soal_id: soalId)
+        let request = ChatRequest(message: message, question_code: questionCode)
         
         do {
             let bodyData = try JSONEncoder().encode(request)
@@ -220,7 +220,7 @@ class ChatBotViewModel: ObservableObject {
     }
     
     func clearAllHistory() async {
-      guard currentSoalId != nil else { return }
+      guard currentQuestionCode != nil else { return }
         
         isDeletingMessage = true
         

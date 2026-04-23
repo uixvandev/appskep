@@ -12,24 +12,24 @@ import Combine
 class TryOutCoordinator: ObservableObject {
     // Try Out states
     @Published var isShowingTryOut = false
-    @Published var currentTryOutId: Int?
+    @Published var currentTryOutCode: String?
     
     // Result states
     @Published var isShowingResult = false
-    @Published var tryOutResult: TryOutResult?
+    @Published var tryOutResult: TryOutResultsData?
     
-    // Pembahasan states - Add these
+    // Pembahasan states
     @Published var isShowingPembahasan = false
-    @Published var currentPembahasanTryOutId: Int?
+    @Published var currentPembahasanTryOutCode: String?
     
-    func startTryOut(tryOutId: Int) {
-        print("🚀 TryOutCoordinator: Starting try out with ID: \(tryOutId)")
-        currentTryOutId = tryOutId
+    func startTryOut(tryoutCode: String) {
+        print("🚀 TryOutCoordinator: Starting try out with code: \(tryoutCode)")
+        currentTryOutCode = tryoutCode
         isShowingTryOut = true
     }
     
-    func showResult(_ result: TryOutResult) {
-        print("📊 TryOutCoordinator: Showing result for try out ID: \(result.id)")
+    func showResult(_ result: TryOutResultsData) {
+        print("📊 TryOutCoordinator: Showing result for try out code: \(result.tryout_code)")
         tryOutResult = result
         isShowingTryOut = false
         isShowingResult = true
@@ -40,31 +40,31 @@ class TryOutCoordinator: ObservableObject {
         isShowingResult = false
         isShowingTryOut = false
         tryOutResult = nil
-        currentTryOutId = nil
+        currentTryOutCode = nil
     }
     
-    // Add pembahasan methods
-    func showPembahasan(tryOutId: Int) {
-        print("📚 TryOutCoordinator: Showing pembahasan for try out ID: \(tryOutId)")
-        currentPembahasanTryOutId = tryOutId
+    // Pembahasan methods
+    func showPembahasan(tryoutCode: String) {
+        print("📚 TryOutCoordinator: Showing pembahasan for try out code: \(tryoutCode)")
+        currentPembahasanTryOutCode = tryoutCode
         isShowingPembahasan = true
     }
     
     func closePembahasan() {
         print("📚 TryOutCoordinator: Closing pembahasan")
         isShowingPembahasan = false
-        currentPembahasanTryOutId = nil
+        currentPembahasanTryOutCode = nil
     }
     
-    func transitionToPembahasan(tryOutId: Int) {
-        print("📚 TryOutCoordinator: Transitioning from result to pembahasan for try out ID: \(tryOutId)")
+    func transitionToPembahasan(tryoutCode: String) {
+        print("📚 TryOutCoordinator: Transitioning from result to pembahasan for try out code: \(tryoutCode)")
         // Dismiss result first to avoid multiple sheets
         isShowingResult = false
         tryOutResult = nil
         
         // Present pembahasan after the result has been dismissed
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-            self.currentPembahasanTryOutId = tryOutId
+            self.currentPembahasanTryOutCode = tryoutCode
             self.isShowingPembahasan = true
         }
     }

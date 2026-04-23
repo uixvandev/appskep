@@ -8,45 +8,47 @@
 import Foundation
 
 struct Paket: Codable, Identifiable, Equatable {
-    let id: Int
-    let kelas_paket_id: Int?
-    let kode_paket: String?
+    let package_code: String
+    let class_package_id: Int?
     let name: String
     let description: String
     let duration: Int
     let totalQuestions: Int? // Make this optional since API doesn't always provide it
+    let is_active: Int?
+    
+    var id: String { package_code }
     
     enum CodingKeys: String, CodingKey {
-        case id
-        case kelas_paket_id
-        case kode_paket
+        case package_code
+        case class_package_id
         case name
         case description
         case duration
         case totalQuestions = "total_questions"
+        case is_active
     }
     
     // Add custom initializer to handle missing totalQuestions
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(Int.self, forKey: .id)
-        kelas_paket_id = try container.decodeIfPresent(Int.self, forKey: .kelas_paket_id)
-        kode_paket = try container.decodeIfPresent(String.self, forKey: .kode_paket)
+        package_code = try container.decode(String.self, forKey: .package_code)
+        class_package_id = try container.decodeIfPresent(Int.self, forKey: .class_package_id)
         name = try container.decode(String.self, forKey: .name)
         description = try container.decode(String.self, forKey: .description)
         duration = try container.decode(Int.self, forKey: .duration)
         totalQuestions = try container.decodeIfPresent(Int.self, forKey: .totalQuestions)
+        is_active = try container.decodeIfPresent(Int.self, forKey: .is_active)
     }
     
     // Add convenience initializer for creating instances manually
-    init(id: Int, kelas_paket_id: Int? = nil, kode_paket: String? = nil, name: String, description: String, duration: Int, totalQuestions: Int? = nil) {
-        self.id = id
-        self.kelas_paket_id = kelas_paket_id
-        self.kode_paket = kode_paket
+    init(package_code: String, class_package_id: Int? = nil, name: String, description: String, duration: Int, totalQuestions: Int? = nil, is_active: Int? = nil) {
+        self.package_code = package_code
+        self.class_package_id = class_package_id
         self.name = name
         self.description = description
         self.duration = duration
         self.totalQuestions = totalQuestions
+        self.is_active = is_active
     }
 }
 
@@ -103,7 +105,7 @@ struct PaketResponseMeta: Codable {
     let message: String
 }
 
-// For single paket response (like from /api/v1/pakets/{id})
+// For single paket response (like from /api/v1/pakets/{package_code})
 struct SinglePaketResponse: Codable {
     let success: Bool
     let message: String

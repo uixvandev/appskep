@@ -24,18 +24,20 @@ struct NotificationData: Codable {
 }
 
 struct NotificationItem: Codable, Identifiable {
-    let id: Int
+    let notification_id: Int
     let title: String
     let description: String
-    let order_id: Int
+    let order_number: String
     let is_read: Bool
     let created_at: String
     let updated_at: String
     let order_details: OrderDetails
+    
+    var id: Int { notification_id }
 }
 
 struct OrderDetails: Codable {
-    let order_id: String
+    let order_number: String
     let kelas_name: String
     let status: String
     let gross_amount: Int

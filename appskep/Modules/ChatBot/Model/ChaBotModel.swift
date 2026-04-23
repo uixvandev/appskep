@@ -10,7 +10,7 @@ import Foundation
 // MARK: - Chat Request
 struct ChatRequest: Codable {
     let message: String
-    let soal_id: Int?
+    let question_code: String?
 }
 
 // MARK: - Chat Response
@@ -24,9 +24,8 @@ struct ChatData: Codable {
     let id: Int
     let message: String
     let response: String
-    let soal_id: Int
-    let is_bot: Bool
-    let soal_context: SoalContext
+    let question_code: String
+    let soal_context: SoalContext?
     let created_at: String
 }
 
@@ -55,21 +54,21 @@ struct ChatHistoryMessage: Codable, Identifiable {
     let id: Int
     let message: String
     let response: String
-    let soal_id: Int
-    let is_bot: Bool
-    let soal_context: SoalContext
+    let question_code: String
+    let soal_context: SoalContext?
     let created_at: String
 }
 
 struct SoalContext: Codable {
-    let id: Int
+    let question_code: String
     let question: String
     let explanation: String
     let options: [ChatOption]
 }
 
 struct ChatOption: Codable, Identifiable {
-    let id: Int
+    let options_id: Int
+    var id: Int { options_id }
     let option_text: String
     let is_correct: Bool
 }

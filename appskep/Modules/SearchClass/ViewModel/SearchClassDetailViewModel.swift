@@ -23,28 +23,28 @@ class SearchClassDetailViewModel: ObservableObject {
     @Published var showDuplicateOrderAlert = false
     @Published var duplicateOrderMessage: String?
     
-    func fetchAllDetails(id: Int) async {
+    func fetchAllDetails(classCode: String) async {
         isLoading = true
         errorMessage = nil
         
         // Fetch both class details and pakets concurrently
         await withTaskGroup(of: Void.self) { group in
             group.addTask {
-                await self.fetchClassDetail(id: id)
+                await self.fetchClassDetail(classCode: classCode)
             }
             
             group.addTask {
-                await self.fetchPakets(classId: id)
+                await self.fetchPakets(classCode: classCode)
             }
         }
         
         isLoading = false
     }
     
-    private func fetchClassDetail(id: Int) async {
+    private func fetchClassDetail(classCode: String) async {
         do {
             let response: UkomClassDetailResponse = try await APIService.shared.performRequest(
-                endpoint: .getKelasDetail(id: id),
+                endpoint: .getKelasDetail(classCode: classCode),
                 method: .GET,
                 responseType: UkomClassDetailResponse.self
             )
@@ -58,16 +58,16 @@ class SearchClassDetailViewModel: ObservableObject {
         }
     }
     
-    private func fetchPakets(classId: Int) async {
+    private func fetchPakets(classCode: String) async {
         do {
             let response: PaketResponse = try await APIService.shared.performRequest(
-                endpoint: .getPaketsForKelas(classId: classId),
+                endpoint: .getPaketsForKelas(classCode: classCode),
                 method: .GET,
                 responseType: PaketResponse.self
             )
             if response.success {
                 self.pakets = response.data
-                print("✅ Fetched \(self.pakets.count) pakets for class \(classId)")
+                print("✅ Fetched \(self.pakets.count) pakets for class \(classCode)")
             } else {
                 print("❌ Failed to fetch pakets: \(response.message)")
                 self.pakets = []
@@ -78,8 +78,8 @@ class SearchClassDetailViewModel: ObservableObject {
         }
     }
     
-    func buyClass(classId: Int) async {
-        let orderRequest = OrderRequest(kelas_id: classId)
+    func buyClass(classCode: String) async {
+        let orderRequest = OrderRequest(class_code: classCode)
         
         do {
             let bodyData = try JSONEncoder().encode(orderRequest)

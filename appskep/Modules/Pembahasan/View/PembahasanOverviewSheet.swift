@@ -65,10 +65,10 @@ struct PembahasanOverviewSheet: View {
     PembahasanOverviewSheet(
         questions: [
             PembahasanQuestion(
-                soal_id: 1,
+                question_code: "SOAL-001",
                 question: "Test 1",
-                user_answer: UserAnswer(pilihan_jawaban_id: 1, option_text: "A", is_correct: true),
-                correct_answer: CorrectAnswer(pilihan_jawaban_id: 1, option_text: "A", is_correct: true),
+                user_answer: UserAnswer(options_id: 1, option_text: "A", is_correct: true),
+                correct_answer: CorrectAnswer(options_id: 1, option_text: "A", is_correct: true),
                 all_options: [],
                 explanation: "Test",
                 is_user_correct: true,

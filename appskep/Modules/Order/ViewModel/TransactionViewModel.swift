@@ -49,7 +49,7 @@ class TransactionViewModel: ObservableObject {
             result = result.filter { order in
                 order.kelas.name.localizedCaseInsensitiveContains(searchText) ||
                 order.payment_reference.localizedCaseInsensitiveContains(searchText) ||
-                String(order.order_number ?? 0).contains(searchText)
+                order.order_number.localizedCaseInsensitiveContains(searchText)
             }
         }
         
@@ -119,10 +119,10 @@ class TransactionViewModel: ObservableObject {
         isLoadingMore = false
     }
     
-    func fetchOrderDetail(id: Int) async {
+    func fetchOrderDetail(orderNumber: String) async {
         do {
             let response: OrderDetailResponse = try await APIService.shared.performRequest(
-                endpoint: .getOrderDetail(id: id),
+                endpoint: .getOrderDetail(orderNumber: orderNumber),
                 method: .GET,
                 responseType: OrderDetailResponse.self
             )
@@ -130,7 +130,7 @@ class TransactionViewModel: ObservableObject {
             if response.success {
                 self.selectedOrder = response.data
                 // Update order in list if exists
-                if let index = orders.firstIndex(where: { $0.id == id }) {
+                if let index = orders.firstIndex(where: { $0.order_number == orderNumber }) {
                     orders[index] = response.data
                 }
             } else {
@@ -141,10 +141,10 @@ class TransactionViewModel: ObservableObject {
         }
     }
     
-    func checkClassAccess(kelasId: Int) async -> Bool {
+    func checkClassAccess(classCode: String) async -> Bool {
         do {
             let response: CheckAccessResponse = try await APIService.shared.performRequest(
-                endpoint: .checkClassAccess(kelasId: kelasId),
+                endpoint: .checkClassAccess(classCode: classCode),
                 method: .GET,
                 responseType: CheckAccessResponse.self
             )
@@ -156,10 +156,10 @@ class TransactionViewModel: ObservableObject {
         }
     }
 
-    func fetchKelasDetail(kelasId: Int) async -> UkomClass? {
+    func fetchKelasDetail(classCode: String) async -> UkomClass? {
         do {
             let response: UkomClassDetailResponse = try await APIService.shared.performRequest(
-                endpoint: .getKelasDetail(id: kelasId),
+                endpoint: .getKelasDetail(classCode: classCode),
                 method: .GET,
                 responseType: UkomClassDetailResponse.self
             )
@@ -201,7 +201,7 @@ class TransactionViewModel: ObservableObject {
         NotificationCenter.default.post(
             name: NSNotification.Name("OpenMyClassDetail"),
             object: nil,
-            userInfo: ["orderId": order.id, "kelasId": order.kelas_id]
+            userInfo: ["orderNumber": order.order_number, "classCode": order.class_code]
         )
         NotificationCenter.default.post(name: NSNotification.Name("RefreshMyClassesWithRetry"), object: nil)
     }
@@ -209,7 +209,7 @@ class TransactionViewModel: ObservableObject {
     func retryOrder(order: OrderItem) {
         // Navigate to class detail to create new order
         // This would typically be handled by coordinator/navigation
-        print("Retry order: \(order.id)")
+        print("Retry order: \(order.order_number)")
     }
     
     func refreshOrders() async {
@@ -238,17 +238,17 @@ class TransactionViewModel: ObservableObject {
     func handlePaymentCallback(success: Bool, orderID: String? = nil) async {
         print("💳 handlePaymentCallback: success=\(success) orderID=\(orderID ?? "nil")")
         if success {
-            let resolvedOrderId = Int(orderID ?? "") ?? selectedOrder?.id
+            let resolvedOrderNumber = orderID ?? selectedOrder?.order_number
 
-            if let payingOrderId = resolvedOrderId {
-                let isPaid = await waitUntilOrderPaid(orderId: payingOrderId, timeout: 60, interval: 3)
+            if let payingOrderNumber = resolvedOrderNumber {
+                let isPaid = await waitUntilOrderPaid(orderNumber: payingOrderNumber, timeout: 60, interval: 3)
                 if isPaid, let order = selectedOrder {
                     await handlePaymentSuccess(for: order)
                 } else {
-                    print("⚠️ Payment success callback but status not paid yet for order: \(payingOrderId)")
+                    print("⚠️ Payment success callback but status not paid yet for order: \(payingOrderNumber)")
                 }
             } else {
-                print("⚠️ Payment success callback without order id")
+                print("⚠️ Payment success callback without order number")
             }
             
             // Refresh orders to get updated status
@@ -257,7 +257,7 @@ class TransactionViewModel: ObservableObject {
             // Notify app to switch to MyClass tab and refresh classes
             NotificationCenter.default.post(name: NSNotification.Name("SwitchToMyClassTab"), object: nil)
             NotificationCenter.default.post(name: NSNotification.Name("RefreshMyClasses"), object: nil, userInfo: [
-                "orderID": orderID as Any
+                "orderNumber": orderID as Any
             ])
         }
         
@@ -266,14 +266,14 @@ class TransactionViewModel: ObservableObject {
     }
 
     func verifyPaymentStatusAfterDismiss() async {
-        guard let orderId = selectedOrder?.id else { return }
-        print("💳 verifyPaymentStatusAfterDismiss for order: \(orderId)")
+        guard let orderNumber = selectedOrder?.order_number else { return }
+        print("💳 verifyPaymentStatusAfterDismiss for order: \(orderNumber)")
 
-        let isPaid = await waitUntilOrderPaid(orderId: orderId, timeout: 30, interval: 3)
+        let isPaid = await waitUntilOrderPaid(orderNumber: orderNumber, timeout: 30, interval: 3)
         if isPaid, let order = selectedOrder {
             await handlePaymentSuccess(for: order)
         } else {
-            print("⚠️ Order not paid after dismiss: \(orderId)")
+            print("⚠️ Order not paid after dismiss: \(orderNumber)")
         }
     }
 
@@ -286,7 +286,7 @@ class TransactionViewModel: ObservableObject {
         // Notify app to switch to MyClass tab and refresh classes
         NotificationCenter.default.post(name: NSNotification.Name("SwitchToMyClassTab"), object: nil)
         NotificationCenter.default.post(name: NSNotification.Name("RefreshMyClasses"), object: nil, userInfo: [
-            "orderID": order.id
+            "orderNumber": order.order_number
         ])
     }
 
@@ -304,14 +304,14 @@ class TransactionViewModel: ObservableObject {
         content.sound = .default
 
         let request = UNNotificationRequest(
-            identifier: "payment-success-\(order.id)",
+            identifier: "payment-success-\(order.order_number)",
             content: content,
             trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
         )
 
         do {
             try await UNUserNotificationCenter.current().add(request)
-            print("✅ Scheduled payment success notification for order: \(order.id)")
+            print("✅ Scheduled payment success notification for order: \(order.order_number)")
         } catch {
             print("❌ Failed to schedule notification: \(error.localizedDescription)")
         }
@@ -344,19 +344,19 @@ class TransactionViewModel: ObservableObject {
     }
     
     // MARK: - Helpers
-    private func waitUntilOrderPaid(orderId: Int, timeout: TimeInterval, interval: TimeInterval) async -> Bool {
+    private func waitUntilOrderPaid(orderNumber: String, timeout: TimeInterval, interval: TimeInterval) async -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
             // Fetch order detail and check status
-            await fetchOrderDetail(id: orderId)
-            if selectedOrder?.status == .paid {
-                print("✅ Order paid confirmed: \(orderId)")
+            await fetchOrderDetail(orderNumber: orderNumber)
+            if selectedOrder?.status == .success {
+                print("✅ Order paid confirmed: \(orderNumber)")
                 return true
             }
             // Sleep for interval before next check
             try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
         }
-        print("⌛️ Order not paid within timeout: \(orderId)")
+        print("⌛️ Order not paid within timeout: \(orderNumber)")
         return false
     }
 }

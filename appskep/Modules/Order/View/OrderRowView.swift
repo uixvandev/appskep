@@ -20,7 +20,7 @@ struct OrderRowView: View {
                         .font(.headline)
                         .lineLimit(2)
                     
-                    Text("Order #\(order.order_number ?? order.id)")
+                    Text("Order #\(order.order_number)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -91,11 +91,11 @@ struct OrderRowView: View {
                 }
             }
             
-        case .paid:
+        case .success:
             Button(action: {
                 // Navigate to class
                 Task {
-                    let hasAccess = await viewModel.checkClassAccess(kelasId: order.kelas_id)
+                    let hasAccess = await viewModel.checkClassAccess(classCode: order.class_code)
                     if hasAccess {
                         viewModel.openClass(order: order)
                     }
@@ -111,7 +111,7 @@ struct OrderRowView: View {
                     .cornerRadius(16)
             }
             
-        case .expired, .failure:
+        case .failed:
             Button(action: {
                 viewModel.retryOrder(order: order)
             }) {
@@ -134,9 +134,9 @@ struct OrderRowView: View {
 #Preview {
     OrderRowView(
         order: OrderItem(
-            id: 1,
-            order_number: 12345,
-            kelas_id: 1,
+            order_number: "appskep001",
+            class_code: "UKOM-001",
+            email: "john@example.com",
             status: .pending,
             payment_reference: "TXN123456",
             gross_amount: 299000,
@@ -144,8 +144,7 @@ struct OrderRowView: View {
             snap_redirect_url: "https://example.com",
             created_at: "2025-01-01T10:00:00Z",
             updated_at: "2025-01-01T10:00:00Z",
-            user: UserInfo(id: 1, name: "John Doe", email: "john@example.com"),
-            kelas: KelasInfo(id: 1, name: "Kelas UKOM Keperawatan Premium", description: "Kelas persiapan UKOM terlengkap", price: 299000)
+            kelas: KelasInfo(class_code: "UKOM-001", name: "Kelas UKOM Keperawatan Premium", description: "Kelas persiapan UKOM terlengkap", price: 299000)
         )
     )
     .environmentObject(TransactionViewModel())

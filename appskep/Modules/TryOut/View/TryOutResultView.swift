@@ -1,34 +1,24 @@
 import SwiftUI
 
 struct TryOutResultView: View {
-  let result: TryOutResult
+  let result: TryOutResultsData
   @EnvironmentObject private var tryOutCoordinator: TryOutCoordinator
   
-  // Computed properties for statistics
+  // Computed properties for statistics (now directly from API response)
   private var totalQuestions: Int {
-    result.soals.count
+    result.total_questions
   }
   
   private var correctAnswers: Int {
-    result.answers.filter { answer in
-      answer.pilihan_jawaban.is_correct
-    }.count
+    result.correct_answers
   }
   
   private var wrongAnswers: Int {
-    totalQuestions - correctAnswers
+    result.wrong_answers
   }
   
   private var duration: String {
-    let startDate = parseDate(result.started_at)
-    let endDate = parseDate(result.finished_at)
-    
-    if let start = startDate, let end = endDate {
-      let interval = end.timeIntervalSince(start)
-      let minutes = Int(interval) / 60
-      return "\(minutes) Menit"
-    }
-    return "N/A"
+    return "\(result.duration_minutes) Menit"
   }
 
   private var headlineText: String {
@@ -66,7 +56,7 @@ struct TryOutResultView: View {
             .fontWeight(.bold)
           
           // Subtitle
-          Text("Kamu telah menyelesaikan \(result.paket.name)")
+          Text("Kamu telah menyelesaikan \(result.paket_name)")
             .font(.headline)
             .foregroundColor(.secondary)
             .multilineTextAlignment(.center)
@@ -163,7 +153,7 @@ struct TryOutResultView: View {
     VStack(spacing: 16) {
       // Lihat Pembahasan Button
       Button(action: {
-        tryOutCoordinator.transitionToPembahasan(tryOutId: result.id)
+        tryOutCoordinator.transitionToPembahasan(tryoutCode: result.tryout_code)
       }) {
         Text("Lihat pembahasan soal")
           .font(.headline)
@@ -197,26 +187,26 @@ struct TryOutResultView: View {
       tryOutCoordinator.backToHome()
     }
   }
-  
-  private func parseDate(_ dateString: String) -> Date? {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-    return formatter.date(from: dateString)
-  }
 }
 
 #Preview {
   TryOutResultView(
-    result: TryOutResult(
-      id: 1,
-      order_id: 1,
-      paket_id: 1,
-      started_at: "2025-08-01 21:13:41",
-      finished_at: "2025-08-01 21:43:47",
+    result: TryOutResultsData(
+      tryout_code: "TRY-001",
+      paket_name: "Try Out Appskep Part 1",
+      total_questions: 10,
+      answered_questions: 10,
+      correct_answers: 7,
+      wrong_answers: 3,
+      unanswered: 0,
       score: 85.0,
-      paket: Paket(id: 1, name: "Try Out Appskep Part 1", description: "Test", duration: 150, totalQuestions: 4),
-      soals: [],
-      answers: []
+      percentage: 85,
+      grade: "A",
+      started_at: "2025-08-01T21:13:41+07:00",
+      finished_at: "2025-08-01T21:43:47+07:00",
+      duration_minutes: 30,
+      passed: true,
+      passing_score: 60
     )
   )
   .environmentObject(TryOutCoordinator())

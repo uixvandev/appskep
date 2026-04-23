@@ -12,21 +12,21 @@ class NavigationCoordinator: ObservableObject {
     static let shared = NavigationCoordinator()
     
     @Published var currentView: AppView = .mainTab
-    @Published var tryOutResult: TryOutResult?
+    @Published var tryOutResult: TryOutResultsData?
     
     private init() {}
     
     enum AppView {
         case mainTab
-        case tryOut(tryOutId: Int)
-        case result(TryOutResult)
+        case tryOut(tryoutCode: String)
+        case result(TryOutResultsData)
     }
     
-    func startTryOut(tryOutId: Int) {
-        currentView = .tryOut(tryOutId: tryOutId)
+    func startTryOut(tryoutCode: String) {
+        currentView = .tryOut(tryoutCode: tryoutCode)
     }
     
-    func showResult(_ result: TryOutResult) {
+    func showResult(_ result: TryOutResultsData) {
         tryOutResult = result
         currentView = .result(result)
     }

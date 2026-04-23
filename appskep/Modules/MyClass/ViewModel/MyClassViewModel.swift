@@ -51,7 +51,7 @@ class MyClassViewModel: ObservableObject {
       
       if response.success {
         // Keep only paid classes; exclude pending/expired/cancel/failure
-        let classes = response.data.data.filter { $0.status.lowercased() == "paid" }
+        let classes = response.data.data.filter { $0.status.lowercased() == "success" }
         if currentPage == 1 {
           self.myPaidClasses = classes
         } else {
@@ -92,7 +92,7 @@ class MyClassViewModel: ObservableObject {
       
       if response.success {
         // Keep only paid classes
-        let classes = response.data.data.filter { $0.status.lowercased() == "paid" }
+        let classes = response.data.data.filter { $0.status.lowercased() == "success" }
         self.myPaidClasses = classes
         self.totalPages = response.data.total_pages
         self.currentPage = min(2, self.totalPages + 1)

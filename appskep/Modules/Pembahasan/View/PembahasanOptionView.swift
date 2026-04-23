@@ -122,21 +122,21 @@ struct PembahasanOptionView: View {
 #Preview {
     VStack(spacing: 16) {
         PembahasanOptionView(
-            option: PembahasanOption(id: 1, option_text: "Berikan minum", is_correct: false),
+            option: PembahasanOption(options_id: 1, option_text: "Berikan minum", is_correct: false),
             index: "A",
             isUserAnswer: true,
             isCorrectAnswer: false
         )
         
         PembahasanOptionView(
-            option: PembahasanOption(id: 2, option_text: "Lakukan RJP", is_correct: true),
+            option: PembahasanOption(options_id: 2, option_text: "Lakukan RJP", is_correct: true),
             index: "B",
             isUserAnswer: false,
             isCorrectAnswer: true
         )
         
         PembahasanOptionView(
-            option: PembahasanOption(id: 3, option_text: "Hubungi keluarga", is_correct: false),
+            option: PembahasanOption(options_id: 3, option_text: "Hubungi keluarga", is_correct: false),
             index: "C",
             isUserAnswer: false,
             isCorrectAnswer: false
@@ -145,5 +145,5 @@ struct PembahasanOptionView: View {
     .padding()
 }
 #Preview {
-  PembahasanOptionView(option: .init(id: 1, option_text: "Asasasas", is_correct: true), index: "A", isUserAnswer: true, isCorrectAnswer: true)
+  PembahasanOptionView(option: .init(options_id: 1, option_text: "Asasasas", is_correct: true), index: "A", isUserAnswer: true, isCorrectAnswer: true)
 }

@@ -148,7 +148,7 @@ struct ChatBotView: View {
         .background(Color(.systemBackground).ignoresSafeArea())
         .onAppear {
             Task {
-                await viewModel.loadChatHistory(soalId: question.soal_id)
+                await viewModel.loadChatHistory(questionCode: question.question_code)
             }
         }
         .alert("Hapus Pesan", isPresented: $showDeleteConfirmation) {
@@ -236,7 +236,7 @@ struct ChatBotView: View {
                     .font(.headline)
                     .foregroundColor(.blue)
                 Spacer()
-                Text("ID: \(question.soal_id)")
+                Text("ID: \(question.question_code)")
                     .font(.caption)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 2)
@@ -303,9 +303,9 @@ struct ChatBotView: View {
             // Give UI time to update (clear text, dismiss keyboard) before processing message
             try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s
             
-            let omit = viewModel.shouldOmitSoalId(for: message)
-            let passingSoalId: Int? = omit ? nil : question.soal_id
-            await viewModel.sendMessage(message, soalId: passingSoalId)
+            let omit = viewModel.shouldOmitQuestionCode(for: message)
+            let passingQuestionCode: String? = omit ? nil : question.question_code
+            await viewModel.sendMessage(message, questionCode: passingQuestionCode)
         }
     }
     
@@ -315,10 +315,10 @@ struct ChatBotView: View {
 #Preview {
     ChatBotView(
         question: PembahasanQuestion(
-            soal_id: 1,
+            question_code: "SOAL-001",
             question: "Apa tindakan pertama pada pasien henti napas?",
-            user_answer: UserAnswer(pilihan_jawaban_id: 3, option_text: "Lakukan RJP", is_correct: true),
-            correct_answer: CorrectAnswer(pilihan_jawaban_id: 3, option_text: "Lakukan RJP", is_correct: true),
+            user_answer: UserAnswer(options_id: 3, option_text: "Lakukan RJP", is_correct: true),
+            correct_answer: CorrectAnswer(options_id: 3, option_text: "Lakukan RJP", is_correct: true),
             all_options: [],
             explanation: "Resusitasi jantung paru (RJP) adalah prioritas utama untuk mengembalikan sirkulasi dan oksigenasi.",
             is_user_correct: true,

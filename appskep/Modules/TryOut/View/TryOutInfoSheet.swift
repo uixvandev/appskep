@@ -9,7 +9,7 @@ import SwiftUI
 
 struct TryOutInfoSheet: View {
     let paket: Paket
-    let orderId: Int
+    let orderNumber: String
     
     @StateObject private var viewModel = TryOutViewModel()
     @EnvironmentObject private var tryOutCoordinator: TryOutCoordinator
@@ -21,7 +21,7 @@ struct TryOutInfoSheet: View {
     @State private var showRetryConfirmation = false
     @State private var showResultDetail = false
     @State private var showMaxAttemptsAlert = false
-    @State private var actualTryOutId: Int?
+    @State private var actualTryOutCode: String?
     
     var body: some View {
         ZStack {
@@ -100,10 +100,10 @@ struct TryOutInfoSheet: View {
             Text("Try out hanya dapat dilakukan sekali. Pastikan Anda siap karena waktu akan langsung berjalan dan tidak bisa dijeda.")
         }
         .sheet(isPresented: $showResultDetail) {
-            if let tryOutId = actualTryOutId {
+            if let tryOutCode = actualTryOutCode {
                 TryOutResultDetailSheet(
-                    attempt: createLastAttemptInfo() ?? LastAttemptInfo(id: 0, score: 0, passed: false, finished_at: "", status: ""),
-                    actualTryOutId: tryOutId
+                    attempt: createLastAttemptInfo() ?? LastAttemptInfo(tryout_code: "", score: 0, passed: false, finished_at: "", status: ""),
+                    actualTryOutCode: tryOutCode
                 )
             }
         }
@@ -514,7 +514,7 @@ struct TryOutInfoSheet: View {
         guard let retryData = retryData, retryData.total_attempts > 0 else { return nil }
         
         return LastAttemptInfo(
-            id: retryData.attempt_number,
+            tryout_code: actualTryOutCode ?? "",
             score: retryData.best_score ?? 0,
             passed: retryData.has_passed,
             finished_at: "2024-01-01T00:00:00Z",
@@ -525,14 +525,11 @@ struct TryOutInfoSheet: View {
     // MARK: - API Methods
     private func checkRetryEligibility() async {
         actionState = .loading
-        guard let kelasPaketId = paket.kelas_paket_id else {
-            actionState = .error("Kelas paket tidak ditemukan. Silakan coba lagi.")
-            return
-        }
+        let packageCode = paket.package_code
         
         do {
             let response: RetryEligibilityResponse = try await APIService.shared.performRequest(
-                endpoint: .checkRetryEligibility(orderId: orderId, kelasPaketId: kelasPaketId),
+                endpoint: .checkRetryEligibility(orderNumber: orderNumber, packageCode: packageCode),
                 method: .GET,
                 responseType: RetryEligibilityResponse.self
             )
@@ -567,15 +564,12 @@ struct TryOutInfoSheet: View {
             if response.success {
                 // Find the try-out for this paket that is completed
                 let completedTryOut = response.data.data.first { historyItem in
-                    if let kelasPaketId = paket.kelas_paket_id {
-                        return historyItem.kelas_paket_id == kelasPaketId && historyItem.finished_at != nil
-                    }
-                    return historyItem.paket_id == paket.id && historyItem.finished_at != nil
+                    return historyItem.package_code == paket.package_code && historyItem.finished_at != nil
                 }
                 
                 if let tryOut = completedTryOut {
-                    actualTryOutId = tryOut.id
-                    print("✅ Found actual try-out ID: \(tryOut.id) for paket: \(paket.id)")
+                    actualTryOutCode = tryOut.tryout_code
+                    print("✅ Found actual try-out code: \(tryOut.tryout_code) for paket: \(paket.package_code)")
                 }
             }
         } catch {
@@ -588,7 +582,7 @@ struct TryOutInfoSheet: View {
             actionState = .canStart
         } else {
             let syntheticAttempt = LastAttemptInfo(
-                id: data.attempt_number,
+                tryout_code: actualTryOutCode ?? "",
                 score: data.best_score ?? 0,
                 passed: data.has_passed,
                 finished_at: "2024-01-01T00:00:00Z",
@@ -599,16 +593,13 @@ struct TryOutInfoSheet: View {
     }
     
     private func startTryOut() async {
-        guard let kelasPaketId = paket.kelas_paket_id else {
-            actionState = .error("Kelas paket tidak ditemukan. Silakan coba lagi.")
-            return
-        }
+        let packageCode = paket.package_code
 
-        let success = await viewModel.startTryOut(orderId: orderId, kelasPaketId: kelasPaketId)
-        if success, let sessionId = viewModel.tryOutSession?.id {
+        let success = await viewModel.startTryOut(orderNumber: orderNumber, packageCode: packageCode)
+        if success, let sessionCode = viewModel.tryOutSession?.tryout_code {
             dismiss()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                tryOutCoordinator.startTryOut(tryOutId: sessionId)
+                tryOutCoordinator.startTryOut(tryoutCode: sessionCode)
             }
         } else {
             if let error = viewModel.errorMessage {
@@ -881,7 +872,7 @@ struct ErrorCard: View {
 // MARK: - Result Detail Sheet
 struct TryOutResultDetailSheet: View {
     let attempt: LastAttemptInfo
-    let actualTryOutId: Int  // Add this parameter
+    let actualTryOutCode: String  // Changed from Int to String
     @Environment(\.dismiss) private var dismiss
     
     // Mock data for consistency - in real app, you'd pass actual result data
@@ -1052,8 +1043,8 @@ struct TryOutResultDetailSheet: View {
     
     private var actionButtonsView: some View {
         VStack(spacing: 16) {
-            // Lihat Pembahasan Button - Use actualTryOutId instead of attempt.id
-            NavigationLink(destination: PembahasanView(tryOutId: actualTryOutId)) {
+            // Lihat Pembahasan Button - Use actualTryOutCode instead of attempt.id
+            NavigationLink(destination: PembahasanView(tryoutCode: actualTryOutCode)) {
                 Text("Lihat pembahasan soal")
                     .font(.headline)
                     .fontWeight(.bold)
@@ -1082,8 +1073,8 @@ struct TryOutResultDetailSheet: View {
 #Preview {
   NavigationStack {
     TryOutInfoSheet(
-      paket: Paket(id: 1, name: "Try Out Komprehensif UKOM Updated", description: "Paket soal komprehensif yang telah diperbarui", duration: 150, totalQuestions: 180),
-      orderId: 1
+      paket: Paket(package_code: "PKT-001", name: "Try Out Komprehensif UKOM Updated", description: "Paket soal komprehensif yang telah diperbarui", duration: 150, totalQuestions: 180),
+      orderNumber: "appskep001"
     )
     .environmentObject(TryOutCoordinator())
   }

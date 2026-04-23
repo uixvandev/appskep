@@ -56,11 +56,11 @@ struct MainTabView: View {
         .tint(.main)
         // Try Out Modal
         .fullScreenCover(isPresented: Binding(
-            get: { tryOutCoordinator.isShowingTryOut && tryOutCoordinator.currentTryOutId != nil },
+            get: { tryOutCoordinator.isShowingTryOut && tryOutCoordinator.currentTryOutCode != nil },
             set: { newValue in tryOutCoordinator.isShowingTryOut = newValue }
         )) {
-            // At this point currentTryOutId is non-nil
-            TryOutView(tryOutId: tryOutCoordinator.currentTryOutId!)
+            // At this point currentTryOutCode is non-nil
+            TryOutView(tryoutCode: tryOutCoordinator.currentTryOutCode!)
                 .environmentObject(tryOutCoordinator)
         }
         // Result Modal
@@ -73,11 +73,11 @@ struct MainTabView: View {
         }
         // Pembahasan Modal (own local stack is fine for modal-only flow)
         .fullScreenCover(isPresented: Binding(
-            get: { tryOutCoordinator.isShowingPembahasan && tryOutCoordinator.currentPembahasanTryOutId != nil },
+            get: { tryOutCoordinator.isShowingPembahasan && tryOutCoordinator.currentPembahasanTryOutCode != nil },
             set: { newValue in tryOutCoordinator.isShowingPembahasan = newValue }
         )) {
             NavigationStack {
-                PembahasanView(tryOutId: tryOutCoordinator.currentPembahasanTryOutId!)
+                PembahasanView(tryoutCode: tryOutCoordinator.currentPembahasanTryOutCode!)
                     .environmentObject(tryOutCoordinator)
             }
         }

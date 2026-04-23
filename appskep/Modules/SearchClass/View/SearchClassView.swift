@@ -51,7 +51,7 @@ struct SearchClassView: View {
                 } else {
                     LazyVGrid(columns: columns, spacing: 16) {
                         ForEach(filteredClasses) { ukomClass in
-                            NavigationLink(destination: SearchClassDetailView(classId: ukomClass.id)) {
+                            NavigationLink(destination: SearchClassDetailView(classCode: ukomClass.class_code)) {
                                 ClassCardView(ukomClass: ukomClass)
                             }
                             .buttonStyle(PlainButtonStyle()) // Removes blue tint from navigation link

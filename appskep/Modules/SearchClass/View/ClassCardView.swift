@@ -47,5 +47,5 @@ struct ClassCardView: View {
 }
 
 #Preview {
-  ClassCardView(ukomClass: UkomClass(id: 1, name: "Kelas Try Out SwiftUI", description: "ASdjahjdhajhdjadsaj sdsasds sdhsdhs dahsdhshds ahshd", price: 1222))
+  ClassCardView(ukomClass: UkomClass(class_code: "UKOM-001", name: "Kelas Try Out SwiftUI", description: "ASdjahjdhajhdjadsaj sdsasds sdhsdhs dahsdhshds ahshd", price: 1222, is_active: nil))
 }

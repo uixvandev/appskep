@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct TryOutView: View {
-  let tryOutId: Int
+  let tryoutCode: String
   @StateObject private var viewModel = TryOutViewModel()
   @EnvironmentObject private var tryOutCoordinator: TryOutCoordinator
   @State private var showDoubtFinishAlert = false
@@ -43,7 +43,7 @@ struct TryOutView: View {
           
           Button("Coba Lagi") {
             Task {
-              await viewModel.fetchTryOutDetail(tryOutId: tryOutId)
+              await viewModel.fetchTryOutDetail(tryoutCode: tryoutCode)
             }
           }
           .padding()
@@ -58,10 +58,10 @@ struct TryOutView: View {
     .navigationBarHidden(true) // Hide navigation bar completely
     .navigationBarBackButtonHidden(true) // Prevent back button
     .onAppear {
-      print("🎯 TryOutView appeared with tryOutId: \(tryOutId)")
+      print("🎯 TryOutView appeared with tryoutCode: \(tryoutCode)")
       viewModel.setCoordinator(tryOutCoordinator)
       Task {
-        await viewModel.fetchTryOutDetail(tryOutId: tryOutId)
+        await viewModel.fetchTryOutDetail(tryoutCode: tryoutCode)
       }
     }
     .sheet(isPresented: $viewModel.showOverview) {
@@ -69,7 +69,7 @@ struct TryOutView: View {
         TryOutOverviewSheet(
           totalSoal: detail.soals.count,
           answeredSoalIds: Set(viewModel.selectedAnswers.keys),
-          doubtSoalIds: viewModel.doubtSoalIds,
+          doubtSoalIds: viewModel.doubtQuestionCodes,
           soals: detail.soals,
           currentSoalIndex: $viewModel.currentSoalIndex
         )
@@ -220,15 +220,15 @@ struct TryOutView: View {
           isSelected: viewModel.isSelected(option: option)
         )
         .onTapGesture {
-          print("👤 User selected option \(optionChar) for soal \(soal.id)")
-          viewModel.selectAnswer(optionId: option.id)
+          print("👤 User selected option \(optionChar) for soal \(soal.question_code)")
+          viewModel.selectAnswer(optionId: option.options_id)
         }
       }
       
       // Doubt button
       Button(action: {
         if viewModel.isCurrentSoalAnswered {
-          print("👤 User toggled doubt for soal \(soal.id)")
+          print("👤 User toggled doubt for soal \(soal.question_code)")
           viewModel.toggleDoubt()
         } else {
           showDoubtRequiresAnswerAlert = true
@@ -325,5 +325,5 @@ struct TryOutView: View {
 }
 
 #Preview {
-  TryOutView(tryOutId: 69)
+  TryOutView(tryoutCode: "TRY-001")
 }

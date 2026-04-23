@@ -9,7 +9,7 @@ import Foundation
 import SwiftUI
 
 struct OrderRequest: Codable {
-    let kelas_id: Int
+    let class_code: String
 }
 
 struct OrderResponse: Codable {
@@ -57,9 +57,9 @@ struct AccessData: Codable {
 
 // MARK: - Core Models
 struct OrderItem: Codable, Identifiable {
-    let id: Int
-    let order_number: Int?
-    let kelas_id: Int
+    let order_number: String
+    let class_code: String
+    let email: String
     let status: OrderStatus
     let payment_reference: String
     let gross_amount: Int
@@ -67,13 +67,14 @@ struct OrderItem: Codable, Identifiable {
     let snap_redirect_url: String?
     let created_at: String
     let updated_at: String
-    let user: UserInfo
     let kelas: KelasInfo
     
+    var id: String { order_number }
+    
     enum CodingKeys: String, CodingKey {
-        case id
         case order_number
-        case kelas_id
+        case class_code
+        case email
         case status
         case payment_reference
         case gross_amount
@@ -81,7 +82,6 @@ struct OrderItem: Codable, Identifiable {
         case snap_redirect_url
         case created_at
         case updated_at
-        case user
         case kelas
     }
     
@@ -108,38 +108,35 @@ struct OrderItem: Codable, Identifiable {
     }
     
     var canAccessClass: Bool {
-        return status == .paid
+        return status == .success
     }
     
     var canRetry: Bool {
-        return status == .expired || status == .failure
+        return status == .failed
     }
 }
 
 enum OrderStatus: String, Codable, CaseIterable {
     case pending = "pending"
-    case paid = "paid"
-    case expired = "expired"
+    case success = "success"
+    case failed = "failed"
     case cancel = "cancel"
-    case failure = "failed"
     
     var displayName: String {
         switch self {
         case .pending: return "Menunggu Pembayaran"
-        case .paid: return "Berhasil"
-        case .expired: return "Kadaluarsa"
+        case .success: return "Berhasil"
+        case .failed: return "Gagal"
         case .cancel: return "Dibatalkan"
-        case .failure: return "Gagal"
         }
     }
     
     var color: Color {
         switch self {
         case .pending: return .orange
-        case .paid: return .green
-        case .expired: return .gray
+        case .success: return .green
+        case .failed: return .red
         case .cancel: return .red
-        case .failure: return .red
         }
     }
     
@@ -148,14 +145,8 @@ enum OrderStatus: String, Codable, CaseIterable {
     }
 }
 
-struct UserInfo: Codable {
-    let id: Int
-    let name: String
-    let email: String
-}
-
 struct KelasInfo: Codable {
-    let id: Int
+    let class_code: String
     let name: String
     let description: String
     let price: Int
@@ -165,17 +156,15 @@ struct KelasInfo: Codable {
 enum OrderFilter: String, CaseIterable {
     case all = "all"
     case pending = "pending"
-    case paid = "paid"
-    case expired = "expired"
-    case failure = "failed"
+    case success = "success"
+    case failed = "failed"
     
     var displayName: String {
         switch self {
         case .all: return "Semua"
         case .pending: return "Menunggu"
-        case .paid: return "Berhasil"
-        case .expired: return "Kadaluarsa"
-        case .failure: return "Gagal"
+        case .success: return "Berhasil"
+        case .failed: return "Gagal"
         }
     }
 }

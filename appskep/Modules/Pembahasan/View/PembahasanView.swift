@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct PembahasanView: View {
-  let tryOutId: Int
+  let tryoutCode: String
   @StateObject private var viewModel = PembahasanViewModel()
   @Environment(\.dismiss) private var dismiss
   @EnvironmentObject private var tryOutCoordinator: TryOutCoordinator
@@ -72,7 +72,7 @@ struct PembahasanView: View {
               
               Button("Coba Lagi") {
                 Task {
-                  await viewModel.fetchPembahasan(tryOutId: tryOutId)
+                  await viewModel.fetchPembahasan(tryoutCode: tryoutCode)
                 }
               }
               .font(.headline)
@@ -90,7 +90,7 @@ struct PembahasanView: View {
       .navigationBarBackButtonHidden(true)
       .onAppear {
         Task {
-          await viewModel.fetchPembahasan(tryOutId: tryOutId)
+          await viewModel.fetchPembahasan(tryoutCode: tryoutCode)
         }
       }
       .sheet(isPresented: $showOverview) {
@@ -171,7 +171,7 @@ struct PembahasanView: View {
             AnswerOptionCard(
               option: option,
               index: optionChar,
-              isUserAnswer: option.id == question.user_answer?.pilihan_jawaban_id,
+              isUserAnswer: option.options_id == question.user_answer?.options_id,
               isCorrectAnswer: option.is_correct
             )
           }
@@ -405,5 +405,5 @@ struct ExplanationCard: View {
 }
 
 #Preview {
-  PembahasanView(tryOutId: 128)
+  PembahasanView(tryoutCode: "TRY-001")
 }

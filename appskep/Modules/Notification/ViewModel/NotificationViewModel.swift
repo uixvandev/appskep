@@ -144,7 +144,7 @@ class NotificationViewModel: ObservableObject {
     let lastNotifiedId = UserDefaults.standard.integer(forKey: lastNotifiedPaymentIdKey)
     let candidates = items
       .filter { $0.id > lastNotifiedId }
-      .filter { $0.order_details.status.lowercased() == "paid" }
+      .filter { $0.order_details.status.lowercased() == "success" }
       .filter { $0.title.localizedCaseInsensitiveContains("pembayaran") }
 
     guard !candidates.isEmpty else { return }
@@ -245,10 +245,10 @@ class NotificationViewModel: ObservableObject {
         if let index = notifications.firstIndex(where: { $0.id == notification.id }) {
           // Create updated notification directly without intermediate variable
           notifications[index] = NotificationItem(
-            id: notification.id,
+            notification_id: notification.notification_id,
             title: notification.title,
             description: notification.description,
-            order_id: notification.order_id,
+            order_number: notification.order_number,
             is_read: true, // This is the only field that changes
             created_at: notification.created_at,
             updated_at: notification.updated_at,

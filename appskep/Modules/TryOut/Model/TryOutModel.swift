@@ -9,8 +9,8 @@ import Foundation
 
 // MARK: - Start TryOut
 struct StartTryOutRequest: Codable {
-  let order_id: Int
-  let kelas_paket_id: Int
+  let order_number: String
+  let package_code: String
 }
 
 struct StartTryOutResponse: Codable {
@@ -21,45 +21,40 @@ struct StartTryOutResponse: Codable {
 }
 
 struct TryOutSessionData: Codable {
-  let id: Int
-  let order_id: Int
-  let kelas_paket_id: Int
-  let paket_id: Int?
+  let tryout_code: String
+  let order_number: String
+  let package_code: String
   let started_at: String
   let status: String
   let paket_name: String
 
   enum CodingKeys: String, CodingKey {
-    case id, order_id, kelas_paket_id, paket_id, started_at, status, paket_name
+    case tryout_code, order_number, package_code, started_at, status, paket_name
   }
 
   init(from decoder: Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
 
-    id = try container.decode(Int.self, forKey: .id)
-    order_id = try container.decode(Int.self, forKey: .order_id)
-    paket_id = try container.decodeIfPresent(Int.self, forKey: .paket_id)
+    tryout_code = try container.decode(String.self, forKey: .tryout_code)
+    order_number = try container.decode(String.self, forKey: .order_number)
     started_at = try container.decode(String.self, forKey: .started_at)
     status = try container.decode(String.self, forKey: .status)
     paket_name = try container.decode(String.self, forKey: .paket_name)
 
-    if let kelasPaketId = try container.decodeIfPresent(Int.self, forKey: .kelas_paket_id) {
-      kelas_paket_id = kelasPaketId
-    } else if let paketId = paket_id {
-      kelas_paket_id = paketId
+    if let packageCode = try container.decodeIfPresent(String.self, forKey: .package_code) {
+      package_code = packageCode
     } else {
       throw DecodingError.keyNotFound(
-        CodingKeys.kelas_paket_id,
-        DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Missing kelas_paket_id and paket_id")
+        CodingKeys.package_code,
+        DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Missing package_code")
       )
     }
   }
 
-  init(id: Int, order_id: Int, kelas_paket_id: Int, paket_id: Int? = nil, started_at: String, status: String, paket_name: String) {
-    self.id = id
-    self.order_id = order_id
-    self.kelas_paket_id = kelas_paket_id
-    self.paket_id = paket_id
+  init(tryout_code: String, order_number: String, package_code: String, started_at: String, status: String, paket_name: String) {
+    self.tryout_code = tryout_code
+    self.order_number = order_number
+    self.package_code = package_code
     self.started_at = started_at
     self.status = status
     self.paket_name = paket_name
@@ -74,35 +69,41 @@ struct TryOutDetailResponse: Codable {
 }
 
 struct TryOutDetail: Codable, Identifiable, Equatable {
-  let id: Int
-  let kelas_paket_id: Int?
+  let tryout_code: String
+  let package_code: String?
   let paket: Paket
   let soals: [Soal]
+  
+  var id: String { tryout_code }
 }
 
 struct Soal: Codable, Identifiable, Equatable {
-  let id: Int
+  let question_code: String
   let question: String
   let explanation: String
   let pilihan_jawaban: [PilihanJawaban]
+  
+  var id: String { question_code }
 }
 
 struct PilihanJawaban: Codable, Identifiable, Equatable {
-  let id: Int
-  let soal_id: Int
+  let options_id: Int
+  let question_code: String
   let option_text: String
   let is_correct: Bool
+  
+  var id: Int { options_id }
 }
 
 // MARK: - Submit All Answers
 struct SubmitAllAnswersRequest: Codable {
-  let try_out_id: Int
+  let tryout_code: String
   let answers: [AnswerSubmission]
 }
 
 struct AnswerSubmission: Codable {
-  let soal_id: Int
-  let pilihan_jawaban_id: Int
+  let question_code: String
+  let options_id: Int
   let is_doubt: Bool
 }
 
@@ -114,52 +115,17 @@ struct SubmitAllAnswersResponse: Codable {
 
 //MARK: - Finish TryOut
 struct FinishTryOutRequest: Codable {
-  let try_out_id: Int
+  let tryout_code: String
 }
 
 struct FinishTryOutResponse: Codable {
   let success: Bool
   let message: String
-  let data: TryOutResult?
+  let data: TryOutResultsData?
   let error: String?
 }
 
-struct TryOutResult: Codable {
-  let id: Int
-  let order_id: Int
-  let paket_id: Int
-  let started_at: String
-  let finished_at: String
-  let score: Double
-  let paket: Paket
-  let soals: [Soal]
-  let answers: [TryOutAnswer]
-}
-
-struct TryOutAnswer: Codable {
-  let id: Int
-  let try_out_id: Int
-  let soal_id: Int
-  let pilihan_jawaban_id: Int
-  let is_doubt: Bool
-  let soal: AnswerSoal
-  let pilihan_jawaban: AnswerPilihanJawaban
-}
-
-struct AnswerSoal: Codable {
-  let id: Int
-  let question: String
-  let explanation: String
-}
-
-struct AnswerPilihanJawaban: Codable {
-  let id: Int
-  let soal_id: Int
-  let option_text: String
-  let is_correct: Bool
-}
-
-// MARK: - Try Out Results API
+// MARK: - Try Out Results API (used by both finish and results endpoints)
 struct TryOutResultsResponse: Codable {
   let success: Bool
   let message: String
@@ -167,8 +133,7 @@ struct TryOutResultsResponse: Codable {
 }
 
 struct TryOutResultsData: Codable {
-  let tryout_id: Int
-  let user_id: Int
+  let tryout_code: String
   let paket_name: String
   let total_questions: Int
   let answered_questions: Int
@@ -176,7 +141,7 @@ struct TryOutResultsData: Codable {
   let wrong_answers: Int
   let unanswered: Int
   let score: Double
-  let percentage: Int
+  let percentage: Double
   let grade: String
   let started_at: String
   let finished_at: String
@@ -193,13 +158,13 @@ struct PembahasanResponse: Codable {
 }
 
 struct PembahasanData: Codable {
-  let tryout_id: Int
+  let tryout_code: String
   let questions: [PembahasanQuestion]
   let summary: PembahasanSummary
 }
 
 struct PembahasanQuestion: Codable, Identifiable {
-  let soal_id: Int
+  let question_code: String
   let question: String
   let user_answer: UserAnswer?
   let correct_answer: CorrectAnswer
@@ -208,25 +173,27 @@ struct PembahasanQuestion: Codable, Identifiable {
   let is_user_correct: Bool
   let category: String
   
-  var id: Int { soal_id }
+  var id: String { question_code }
 }
 
 struct UserAnswer: Codable {
-  let pilihan_jawaban_id: Int
+  let options_id: Int
   let option_text: String
   let is_correct: Bool
 }
 
 struct CorrectAnswer: Codable {
-  let pilihan_jawaban_id: Int
+  let options_id: Int
   let option_text: String
   let is_correct: Bool
 }
 
 struct PembahasanOption: Codable, Identifiable {
-  let id: Int
+  let options_id: Int
   let option_text: String
   let is_correct: Bool
+  
+  var id: Int { options_id }
 }
 
 struct PembahasanSummary: Codable {
@@ -249,26 +216,26 @@ struct TryOutHistoryData: Codable {
 }
 
 struct TryOutHistoryItem: Codable, Identifiable {
-    let id: Int
-    let order_id: Int
-    let paket_id: Int
-  let kelas_paket_id: Int?
+    let tryout_code: String
+    let order_number: String
+    let package_code: String?
     let started_at: String
     let finished_at: String?
     let score: Double?
     let paket: Paket
     
+    var id: String { tryout_code }
+    
     enum CodingKeys: String, CodingKey {
-      case id, order_id, paket_id, kelas_paket_id, started_at, finished_at, score, paket
+      case tryout_code, order_number, package_code, started_at, finished_at, score, paket
     }
     
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
-        id = try container.decode(Int.self, forKey: .id)
-        order_id = try container.decode(Int.self, forKey: .order_id)
-        paket_id = try container.decode(Int.self, forKey: .paket_id)
-        kelas_paket_id = try container.decodeIfPresent(Int.self, forKey: .kelas_paket_id)
+        tryout_code = try container.decode(String.self, forKey: .tryout_code)
+        order_number = try container.decode(String.self, forKey: .order_number)
+        package_code = try container.decodeIfPresent(String.self, forKey: .package_code)
         started_at = try container.decode(String.self, forKey: .started_at)
         
         // Handle nullable finished_at
@@ -378,11 +345,13 @@ struct RetryEligibilityData: Codable {
 
 // MARK: - Supporting Types (Single definition only)
 struct LastAttemptInfo: Codable, Identifiable {
-  let id: Int
+  let tryout_code: String
   let score: Double
   let passed: Bool
   let finished_at: String
   let status: String
+  
+  var id: String { tryout_code }
 }
 
 // MARK: - Try Out Action State

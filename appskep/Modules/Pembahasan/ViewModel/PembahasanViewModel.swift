@@ -38,28 +38,28 @@ class PembahasanViewModel: ObservableObject {
         return currentQuestionIndex == total - 1
     }
     
-    func fetchPembahasan(tryOutId: Int) async {
+    func fetchPembahasan(tryoutCode: String) async {
         isLoading = true
         errorMessage = nil
         
         // Fetch both results and pembahasan in parallel
         await withTaskGroup(of: Void.self) { group in
             group.addTask {
-                await self.fetchResults(tryOutId: tryOutId)
+                await self.fetchResults(tryoutCode: tryoutCode)
             }
             
             group.addTask {
-                await self.fetchPembahasanData(tryOutId: tryOutId)
+                await self.fetchPembahasanData(tryoutCode: tryoutCode)
             }
         }
         
         isLoading = false
     }
     
-    private func fetchResults(tryOutId: Int) async {
+    private func fetchResults(tryoutCode: String) async {
         do {
             let response: TryOutResultsResponse = try await APIService.shared.performRequest(
-              endpoint: .getTryOutResult(id: tryOutId),
+              endpoint: .getTryOutResult(tryoutCode: tryoutCode),
                 method: .GET,
                 responseType: TryOutResultsResponse.self
             )
@@ -74,10 +74,10 @@ class PembahasanViewModel: ObservableObject {
         }
     }
     
-    private func fetchPembahasanData(tryOutId: Int) async {
+    private func fetchPembahasanData(tryoutCode: String) async {
         do {
             let response: PembahasanResponse = try await APIService.shared.performRequest(
-                endpoint: .getPembahasan(id: tryOutId),
+                endpoint: .getPembahasan(tryoutCode: tryoutCode),
                 method: .GET,
                 responseType: PembahasanResponse.self
             )
